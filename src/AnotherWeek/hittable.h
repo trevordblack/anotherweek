@@ -14,6 +14,7 @@
 #include "common/rtweekend.h"
 #include "common/aabb.h"
 
+
 class material;
 
 void get_sphere_uv(const vec3& p, double& u, double& v) {

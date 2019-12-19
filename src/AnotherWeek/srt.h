@@ -68,6 +68,4 @@ class srt {
         mat4x4 m;
 }
 
-
-
 #endif

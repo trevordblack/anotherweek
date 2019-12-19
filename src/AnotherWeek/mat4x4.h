@@ -2,7 +2,6 @@
 #define MAT4X4_h
 
 #include "vec4.h"
-#include <iostream>
 
 class mat4x4 {
     public:
