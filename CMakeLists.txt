@@ -70,10 +70,30 @@ set ( SOURCE_REST_OF_YOUR_LIFE
   src/TheRestOfYourLife/main.cc
 )
 
+set ( SOURCE_ANOTHER_WEEK
+  ${COMMON_ALL}
+  src/common/aabb.h
+  src/common/external/stb_image.h
+  src/common/perlin.h
+  src/common/rtw_stb_image.h
+  src/common/texture.h
+  src/AnotherWeek/aarect.h
+  src/AnotherWeek/box.h
+  src/AnotherWeek/bvh.h
+  src/AnotherWeek/constant_medium.h
+  src/AnotherWeek/hittable.h
+  src/AnotherWeek/hittable_list.h
+  src/AnotherWeek/material.h
+  src/AnotherWeek/moving_sphere.h
+  src/AnotherWeek/sphere.h
+  src/AnotherWeek/main.cc
+)
+
 # Executables
 add_executable(inOneWeekend      ${SOURCE_ONE_WEEKEND})
 add_executable(theNextWeek       ${SOURCE_NEXT_WEEK})
 add_executable(theRestOfYourLife ${SOURCE_REST_OF_YOUR_LIFE})
+add_executable(anotherWeek       ${SOURCE_ANOTHER_WEEK})
 add_executable(cos_cubed         src/TheRestOfYourLife/cos_cubed.cc         ${COMMON_ALL})
 add_executable(cos_density       src/TheRestOfYourLife/cos_density.cc       ${COMMON_ALL})
 add_executable(integrate_x_sq    src/TheRestOfYourLife/integrate_x_sq.cc    ${COMMON_ALL})
@@ -84,6 +104,7 @@ add_executable(sphere_plot       src/TheRestOfYourLife/sphere_plot.cc       ${CO
 target_include_directories(inOneWeekend      PRIVATE src)
 target_include_directories(theNextWeek       PRIVATE src)
 target_include_directories(theRestOfYourLife PRIVATE src)
+target_include_directories(anotherWeek       PRIVATE src)
 target_include_directories(cos_cubed         PRIVATE src)
 target_include_directories(cos_density       PRIVATE src)
 target_include_directories(integrate_x_sq    PRIVATE src)
