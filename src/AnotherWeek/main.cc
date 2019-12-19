@@ -52,7 +52,7 @@ int main() {
 
     hittable **list = new hittable*[1];
     material *red = new lambertian(new constant_texture(vec3(0.85, 0.05, 0.05)));
-    list[0] = new rect(red);
+    list[0] = new rect(red, new srt());
     hittable *world = new hittable_list(list, 1);
 
     vec3 lookfrom(0, 2, 2);

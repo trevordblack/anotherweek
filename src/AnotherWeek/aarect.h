@@ -13,12 +13,14 @@
 
 #include "common/rtweekend.h"
 #include "hittable.h"
-//#include "srt.h"
 
 class rect : public hittable {
     public:
         rect() {}
         rect(material* mat_ptr) : mp(mat_ptr) {}
+        rect(material* mat_ptr, srt* srt0) : mp(mat_ptr) {
+            transform = srt0;
+        }
 
         virtual bool hit(const ray& r, double t0, double t1, hit_record& rec) const;
         virtual bool bounding_box(double t0, double t1, aabb& output_box) const;

@@ -12,7 +12,7 @@ mat4x4 scale_matrix(double sx, double sy, double sz)
                    0,  0,  0, 1);
 }
 
-mat4x4 translation_matrix(double tx, ty, double tz)
+mat4x4 translation_matrix(double tx, double ty, double tz)
 {
     return mat4x4(0, 0, 0, tx,
                   0, 0, 0, ty,
@@ -42,6 +42,8 @@ mat4x4 rotation_y_matrix(double theta)
 
 mat4x4 rotation_z_matrix(double theta)
 {
+    double c = cos(theta);
+    double s = sin(theta);  
     return mat4x4(c, -s, 0, 0,
                   s,  c, 0, 0,
                   0,  0, 1, 0,
@@ -66,6 +68,6 @@ class srt {
 
 
         mat4x4 m;
-}
+};
 
 #endif

@@ -13,7 +13,7 @@
 
 #include "common/rtweekend.h"
 #include "common/aabb.h"
-
+#include "srt.h"
 
 class material;
 
@@ -23,7 +23,6 @@ void get_sphere_uv(const vec3& p, double& u, double& v) {
     u = 1-(phi + pi) / (2*pi);
     v = (theta + pi/2) / pi;
 }
-
 
 struct hit_record {
     double t;
@@ -38,6 +37,8 @@ class hittable {
     public:
         virtual bool hit(const ray& r, double t_min, double t_max, hit_record& rec) const = 0;
         virtual bool bounding_box(double t0, double t1, aabb& output_box) const = 0;
+
+        srt* transform;
 };
 
 class flip_normals : public hittable {
