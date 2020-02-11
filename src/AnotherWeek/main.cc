@@ -51,8 +51,12 @@ int main() {
     std::cout << "P3\n" << nx << ' ' << ny << "\n255\n";
 
     hittable **list = new hittable*[1];
-    material *red = new lambertian(new constant_texture(vec3(0.85, 0.05, 0.05)));
-    list[0] = new rect(red, new srt());
+    //material *red = new lambertian(new constant_texture(vec3(0.85, 0.05, 0.05)));
+    material *mirror = new metal(vec3(1.0, 1.0, 1.0), 0.1);
+    
+    list[0] = new rect(mirror, new srt(1.0, 1.0, 1.0,
+                                       0.0, 0.0, 0.0,
+                                       0.0, 0.3, 0.0));
     hittable *world = new hittable_list(list, 1);
 
     vec3 lookfrom(0, 2, 2);

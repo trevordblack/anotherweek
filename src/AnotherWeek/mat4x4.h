@@ -39,7 +39,14 @@ inline vec4 operator*(const mat4x4 &m, const vec4 &v) {
                 dot(m.v[3], v));
 }
 
+inline vec3 operator*(const mat4x4 &m, const vec3 &v) {
+    return vec3( m.v[0].e[0]*v.e[0] + m.v[0].e[1]*v.e[1] + m.v[0].e[2]*v.e[2],
+                 m.v[1].e[0]*v.e[0] + m.v[1].e[1]*v.e[1] + m.v[1].e[2]*v.e[2],
+                 m.v[2].e[0]*v.e[0] + m.v[2].e[1]*v.e[1] + m.v[2].e[2]*v.e[2]);
+}
+
 inline mat4x4 operator*(const mat4x4 &a, const mat4x4 &b) {
+    // Rearrange data elements of matrix b
     vec4 bt0 = vec4(b.v[0].e[0], b.v[1].e[0], b.v[2].e[0], b.v[3].e[0]);
     vec4 bt1 = vec4(b.v[0].e[1], b.v[1].e[1], b.v[2].e[1], b.v[3].e[1]);
     vec4 bt2 = vec4(b.v[0].e[2], b.v[1].e[2], b.v[2].e[2], b.v[3].e[2]);

@@ -13,7 +13,6 @@
 
 #include "common/rtweekend.h"
 #include "common/aabb.h"
-#include "srt.h"
 
 class material;
 
@@ -37,8 +36,6 @@ class hittable {
     public:
         virtual bool hit(const ray& r, double t_min, double t_max, hit_record& rec) const = 0;
         virtual bool bounding_box(double t0, double t1, aabb& output_box) const = 0;
-
-        srt* transform;
 };
 
 class flip_normals : public hittable {
