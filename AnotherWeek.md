@@ -23,30 +23,32 @@ Chapter 5: Obj Loading
   - Stanford Dragon
   - Sponza
  
-Chapter 6: Surface Area Heuristic
+Chapter -: Surface Area Heuristic
 
-Chapter 7: Diffuse Materials
+Chapter -: BRDF
+
+Chapter -: Diffuse Materials
   - Oren-Nayar
   - Plastics
   - Fouriers
  
-Chapter 8: Glossy Materials
+Chapter -: Glossy Materials
   - Include specular term
 
-Chapter 9: BSSRDF
+Chapter -: BSSRDF
 
-Chapter 10: Make a video
+Chapter -: Make a video
   - shutter open time, ISO
   - frames per second
   - successive frames
  
-Chapter 11: Keyframes
+Chapter -: Keyframes
    - Rewrite motion blur
  
-Chapter 12: Shadow Rays
+Chapter -: Shadow Rays
   - Light array
   - Random point on quad
   - Random point on sphere
   - Random point on triangle
  
-Chapter 13: Environment Map
+Chapter -: Environment Map
