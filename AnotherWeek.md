@@ -32,19 +32,21 @@ Chapter 7: Diffuse Materials
  
 Chapter 8: Glossy Materials
   - Include specular term
- 
-Chapter 9: Make a video
+
+Chapter 9: BSSRDF
+
+Chapter 10: Make a video
   - shutter open time, ISO
   - frames per second
   - successive frames
  
-Chapter 10: Keyframes
+Chapter 11: Keyframes
    - Rewrite motion blur
  
-Chapter 11: Shadow Rays
+Chapter 12: Shadow Rays
   - Light array
   - Random point on quad
   - Random point on sphere
   - Random point on triangle
  
-Chapter 12: Environment Map
+Chapter 13: Environment Map
