@@ -23,8 +23,6 @@ Chapter 5: Obj Loading
   - Stanford Dragon
   - Sponza
  
-Chapter -: Surface Area Heuristic
-
 Chapter -: BRDF
 
 Chapter -: Diffuse Materials
@@ -36,6 +34,8 @@ Chapter -: Glossy Materials
   - Include specular term
 
 Chapter -: BSSRDF
+
+Chapter -: Light Paths & AOVs
 
 Chapter -: Make a video
   - shutter open time, ISO
