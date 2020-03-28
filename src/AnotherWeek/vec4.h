@@ -73,7 +73,7 @@ class vec4 {
 // vec4 Utility Functions
 
 inline std::ostream& operator<<(std::ostream &out, const vec4 &v) {
-    return out << v.e[0] << ' ' << v.e[1] << ' ' << v.e[2] << ' ' v.e[3];
+    return out << v.e[0] << ' ' << v.e[1] << ' ' << v.e[2] << ' ' << v.e[3];
 }
 
 inline vec4 operator+(const vec4 &u, const vec4 &v) {
@@ -89,7 +89,7 @@ inline vec4 operator*(const vec4 &u, const vec4 &v) {
 }
 
 inline vec4 operator*(double t, const vec4 &v) {
-    return vec4(t*v.e[0], t*v.e[1], t*v.e[2], t*e[3]);
+    return vec4(t*v.e[0], t*v.e[1], t*v.e[2], t*v.e[3]);
 }
 
 inline vec4 operator*(const vec4 &v, double t) {

@@ -95,7 +95,7 @@ Affine Transforms
     [Listing [single-rect-main]: <kbd>[main.cc]</kbd> Depicting a single red rect]
 
   ![Single Red Rect](../images/img.single-rect.png)
-  
+
 </div>
 
 <div class='together'>
@@ -162,7 +162,7 @@ Affine Transforms
     // vec4 Utility Functions
 
     inline std::ostream& operator<<(std::ostream &out, const vec4 &v) {
-        return out << v.e[0] << ' ' << v.e[1] << ' ' << v.e[2] << ' ' v.e[3];
+        return out << v.e[0] << ' ' << v.e[1] << ' ' << v.e[2] << ' ' << v.e[3];
     }
 
     inline vec4 operator+(const vec4 &u, const vec4 &v) {
@@ -178,7 +178,7 @@ Affine Transforms
     }
 
     inline vec4 operator*(double t, const vec4 &v) {
-        return vec4(t*v.e[0], t*v.e[1], t*v.e[2], t*e[3]);
+        return vec4(t*v.e[0], t*v.e[1], t*v.e[2], t*v.e[3]);
     }
 
     inline vec4 operator*(const vec4 &v, double t) {
@@ -218,14 +218,14 @@ Affine Transforms
 
             mat4x4(const vec4 &v0, const vec4 &v1, const vec4 &v2, const vec4 &v3) {
                v[0] = v0;
-               v[1] = v2;
-               v[2] = v3;
-               v[3] = v4;
+               v[1] = v1;
+               v[2] = v2;
+               v[3] = v3;
             }
-        
+
             mat4x4(double m00, double m01, double m02, double m03,
                    double m10, double m11, double m12, double m13,
-                   double m20, double m21, double m22, double m33,
+                   double m20, double m21, double m22, double m23,
                    double m30, double m31, double m32, double m33) {
                v[0] = vec4(m00, m01, m02, m03);
                v[1] = vec4(m10, m11, m12, m13);
@@ -233,7 +233,7 @@ Affine Transforms
                v[3] = vec4(m30, m31, m32, m33);
             }
 
-            vec4 v[4];  
+            vec4 v[4];
     };
 
     inline vec4 operator*(const mat4x4 &m, const vec4 &v) {
@@ -244,11 +244,11 @@ Affine Transforms
     }
 
     inline mat4x4 operator*(const mat4x4 &a, const mat4x4 &b) {
-        vec4 bt0 = vec4(b.v[0].e[0], b.v[1].e[0], b.v[2].e[0], v.v[3].e[0]);
-        vec4 bt1 = vec4(b.v[0].e[1], b.v[1].e[1], b.v[2].e[1], v.v[3].e[1]);
-        vec4 bt2 = vec4(b.v[0].e[2], b.v[1].e[2], b.v[2].e[2], v.v[3].e[2]);
-        vec4 bt3 = vec4(b.v[0].e[3], b.v[1].e[3], b.v[2].e[3], v.v[3].e[3]);
-            
+        vec4 bt0 = vec4(b.v[0].e[0], b.v[1].e[0], b.v[2].e[0], b.v[3].e[0]);
+        vec4 bt1 = vec4(b.v[0].e[1], b.v[1].e[1], b.v[2].e[1], b.v[3].e[1]);
+        vec4 bt2 = vec4(b.v[0].e[2], b.v[1].e[2], b.v[2].e[2], b.v[3].e[2]);
+        vec4 bt3 = vec4(b.v[0].e[3], b.v[1].e[3], b.v[2].e[3], b.v[3].e[3]);
+
         return mat4x4(dot(a.v[0], bt0), dot(a.v[0], bt1), dot(a.v[0], bt2), dot(a.v[0], bt3),
                       dot(a.v[1], bt0), dot(a.v[1], bt1), dot(a.v[1], bt2), dot(a.v[1], bt3),
                       dot(a.v[2], bt0), dot(a.v[2], bt1), dot(a.v[2], bt2), dot(a.v[2], bt3),
@@ -268,9 +268,9 @@ Affine Transforms
                 double tx, double ty, double tz)
             {
                 mat4x4 scale = scale_matrix(sx, sy, sz);
-                mat4x4 rot_x = rotation_x_matrix(rx); 
-                mat4x4 rot_y = rotation_y_matrix(ry); 
-                mat4x4 rot_z = rotation_z_matrix(rz); 
+                mat4x4 rot_x = rotation_x_matrix(rx);
+                mat4x4 rot_y = rotation_y_matrix(ry);
+                mat4x4 rot_z = rotation_z_matrix(rz);
                 mat4x4 trans = translation_matrix(tx, ty, tz);
 
                 m = scale * rot_x * rot_y * rot_z * trans;
@@ -278,11 +278,101 @@ Affine Transforms
 
 
             mat4x4 m;
-    }
+    };
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     [Listing [srt-class]: <kbd>[srt.h]</kbd> The simplest Scale-Rotation-Translation class]
 </div>
 
+
+<div class='together'>
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C++
+    #include "srt.h"
+
+    ...
+
+    class hittable {
+    public:
+        virtual bool hit(const ray& r, double t_min, double t_max, hit_record& rec) const = 0;
+        virtual bool bounding_box(double t0, double t1, aabb& output_box) const = 0;
+
+        srt* transform;
+    };
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    [Listing [hittable-with-srt]: <kbd>[hittable.h]</kbd> Adding an SRT transform to hittable]
+</div>
+
+
+<div class='together'>
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C++
+    class rect : public hittable {
+        public:
+            rect() {}
+            rect(material* mat_ptr) : mp(mat_ptr) {}
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C++ highlight
+            rect(material* mat_ptr, srt* srt0) : mp(mat_ptr) {
+                transform = srt0; 
+            }
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C++
+
+            virtual bool hit(const ray& r, double t0, double t1, hit_record& rec) const;
+            virtual bool bounding_box(double t0, double t1, aabb& output_box) const;
+
+            material  *mp;
+    };
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    [Listing [rect-srt-constructor]: <kbd>[aarect.h]</kbd> Adding an SRT constructor to rect]
+</div>
+
+
+
+
+
+<div class='together'>
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C++
+    hittable **list = new hittable*[1];
+    material *red = new lambertian(new constant_texture(vec3(0.85, 0.05, 0.05)));
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C++ highlight
+    list[0] = new rect(red, new srt());
+     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C++
+    hittable *world = new hittable_list(list, 1);
+
+    vec3 lookfrom(0, 2, 2);
+    vec3 lookat(0, 0, 0);
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    [Listing [srt-rect]: <kbd>[main.cc]</kbd> A single rect with initial srt]
+
+If everything went correctly, you should get the same picture as before.
+
+</div>
+
+
+
+
+<div class='together'>
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C++
+    class srt {
+        public:
+            srt() {}
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C++ highlight
+            srt(double sx, double sy, double sz,
+                double rx, double ry, double rz,
+                double tx, double ty, double tz)
+            {
+                mat4x4 scale = scale_matrix(sx, sy, sz);
+                mat4x4 rot_x = rotation_x_matrix(rx);
+                mat4x4 rot_y = rotation_y_matrix(ry);
+                mat4x4 rot_z = rotation_z_matrix(rz);
+                mat4x4 trans = translation_matrix(tx, ty, tz);
+
+                m = scale * rot_x * rot_y * rot_z * trans;
+            }
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C++
+
+            mat4x4 m;
+    };
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    [Listing [srt-class-parameters]: <kbd>[srt.h]</kbd> The srt class with valued constructor]
+</div>
 
 
 <!-- Markdeep: https://casual-effects.com/markdeep/ -->

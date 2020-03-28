@@ -5,9 +5,13 @@ Chapter 1: Multi-threading
 
 Chapter 2: SRT Affine Transforms
   - Add SRT matrix class
+  - Rewrite rect
+  - Rewrite box
   - Rewrite sphere (get ellipses for free)
-  - Rewrite quad
- 
+  - Rewrite moving_sphere
+  - Rewrite constant_medium
+  - Enable transform on hittable_list?
+
 Chapter 3: Triangles
 
 Chapter 4: Meshes
