@@ -11,11 +11,13 @@
 // along with this software. If not, see <http://creativecommons.org/publicdomain/zero/1.0/>.
 //==============================================================================================
 
-#include "common/rtweekend.h"
+#include "rtweekend.h"
 
 
 class camera {
     public:
+        camera() : camera(vec3(0,0,-1), vec3(0,0,0), vec3(0,1,0), 40, 1, 0, 10) {}
+
         camera(
             vec3 lookfrom, vec3 lookat, vec3 vup,
             double vfov, // top to bottom, in degrees
@@ -53,6 +55,7 @@ class camera {
             );
         }
 
+    public:
         vec3 origin;
         vec3 lower_left_corner;
         vec3 horizontal;

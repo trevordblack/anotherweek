@@ -5,8 +5,11 @@
 
                                    **Ray Tracing in One Weekend**
                                            Peter Shirley
-                                     Version 2.0.0, 2019-Oct-07
-                    <br>Copyright 2018-2019. Peter Shirley. All rights reserved.
+                          edited by Steve Hollasch and Trevor David Black
+                                                <br>
+                                     Version 3.0.1-wip, 2020-XXX-XX
+                                                <br>
+                      Copyright 2018-2020 Peter Shirley. All rights reserved.
 
 
 
@@ -50,6 +53,9 @@ ptrshrl@gmail.com.
 I’ll be maintaining a site related to the book including further reading and links to resources at a
 blog https://in1weekend.blogspot.com/ related to this book.
 
+Thanks to everyone who lent a hand on this project. You can find them in the [acknowledgments][] at
+the end of this book.
+
 Let’s get on with it!
 
 
@@ -70,15 +76,15 @@ Let’s make some C++ code to output such a thing:
     #include <iostream>
 
     int main() {
-        int nx = 200;
-        int ny = 100;
+        const int image_width = 200;
+        const int image_height = 100;
 
-        std::cout << "P3\n" << nx << ' ' << ny << "\n255\n";
+        std::cout << "P3\n" << image_width << ' ' << image_height << "\n255\n";
 
-        for (int j = ny-1; j >= 0; --j) {
-            for (int i = 0; i < nx; ++i) {
-                auto r = double(i) / nx;
-                auto g = double(j) / ny;
+        for (int j = image_height-1; j >= 0; --j) {
+            for (int i = 0; i < image_width; ++i) {
+                auto r = double(i) / image_width;
+                auto g = double(j) / image_height;
                 auto b = 0.2;
                 int ir = static_cast<int>(255.999 * r);
                 int ig = static_cast<int>(255.999 * g);
@@ -124,7 +130,11 @@ This is how things would look on Windows. On Mac or Linux, it would look like th
 Opening the output file (in `ToyViewer` on my Mac, but try it in your favorite viewer and Google
 “ppm viewer” if your viewer doesn’t support it) shows this result:
 
+  <div class="render">
+
   ![First PPM image](../images/img.first-ppm-image.png)
+
+  </div>
 
 </div>
 
@@ -140,18 +150,10 @@ file in a text editor and see what it looks like. It should start something like
     1 253 51
     2 253 51
     3 253 51
-    4 253 51
     5 253 51
     6 253 51
     7 253 51
     8 253 51
-    9 253 51
-    10 253 51
-    11 253 51
-    12 253 51
-    13 253 51
-    14 253 51
-    15 253 51
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     [Listing [first-img]: First image output]
 </div>
@@ -173,13 +175,13 @@ Our program outputs the image to the standard output stream (`std::cout`), so le
 instead write to the error output stream (`std::cerr`):
 
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C++
-        for (int j = ny-1; j >= 0; --j) {
+        for (int j = image_height-1; j >= 0; --j) {
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C++ highlight
             std::cerr << "\rScanlines remaining: " << j << ' ' << std::flush;
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C++
-            for (int i = 0; i < nx; ++i) {
-                auto r = double(i) / nx;
-                auto g = double(j) / ny;
+            for (int i = 0; i < image_width; ++i) {
+                auto r = double(i) / image_width;
+                auto g = double(j) / image_height;
                 auto b = 0.2;
                 int ir = static_cast<int>(255.999 * r);
                 int ig = static_cast<int>(255.999 * g);
@@ -211,7 +213,6 @@ Here’s the top part of my `vec3` class:
 
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C++
     #include <iostream>
-    #include <cmath>
 
     class vec3 {
         public:
@@ -226,21 +227,21 @@ Here’s the top part of my `vec3` class:
             double operator[](int i) const { return e[i]; }
             double& operator[](int i) { return e[i]; }
 
-            vec3& vec3::operator+=(const vec3 &v) {
+            vec3& operator+=(const vec3 &v) {
                 e[0] += v.e[0];
                 e[1] += v.e[1];
                 e[2] += v.e[2];
                 return *this;
             }
 
-            vec3& vec3::operator*=(const double t) {
+            vec3& operator*=(const double t) {
                 e[0] *= t;
                 e[1] *= t;
                 e[2] *= t;
                 return *this;
             }
 
-            vec3& vec3::operator/=(const double t) {
+            vec3& operator/=(const double t) {
                 return *this *= 1/t;
             }
 
@@ -259,6 +260,7 @@ Here’s the top part of my `vec3` class:
                     << static_cast<int>(255.999 * e[2]) << '\n';
             }
 
+        public:
             double e[3];
     };
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -321,21 +323,21 @@ tastes. The second part of the header file contains vector utility functions:
 Now we can change our main to use this:
 
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C++
-    #include "common/vec3.h"
+    #include "vec3.h"
 
     #include <iostream>
 
     int main() {
-        int nx = 200;
-        int ny = 100;
+        const int image_width = 200;
+        const int image_height = 100;
 
-        std::cout << "P3\n" << nx << ' ' << ny << "\n255\n";
+        std::cout << "P3\n" << image_width << ' ' << image_height << "\n255\n";
 
-        for (int j = ny-1; j >= 0; --j) {
+        for (int j = image_height-1; j >= 0; --j) {
             std::cerr << "\rScanlines remaining: " << j << ' ' << std::flush;
-            for (int i = 0; i < nx; ++i) {
+            for (int i = 0; i < image_width; ++i) {
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C++ highlight
-                vec3 color(double(i)/nx, double(j)/ny, 0.2);
+                vec3 color(double(i)/image_width, double(j)/image_height, 0.2);
                 color.write_color(std::cout);
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C++
             }
@@ -352,15 +354,18 @@ Now we can change our main to use this:
 Rays, a Simple Camera, and Background
 ====================================================================================================
 
+<div class='together'>
 The one thing that all ray tracers have is a ray class, and a computation of what color is seen
-along a ray. Let’s think of a ray as a function $p(t) = \mathbf{a} + t \vec{\mathbf{b}}$. Here
-$\mathbf{p}$ is a 3D position along a line in 3D. $\mathbf{a}$ is the ray origin and
+along a ray. Let’s think of a ray as a function $\mathbf{p}(t) = \mathbf{a} + t \vec{\mathbf{b}}$.
+Here $\mathbf{p}$ is a 3D position along a line in 3D. $\mathbf{a}$ is the ray origin and
 $\vec{\mathbf{b}}$ is the ray direction. The ray parameter $t$ is a real number (`double` in the
 code). Plug in a different $t$ and $p(t)$ moves the point along the ray. Add in negative $t$ and you
 can go anywhere on the 3D line. For positive $t$, you get only the parts in front of $\mathbf{a}$,
-and this is what is often called a half-line or ray. The example $\mathbf{c} = p(2)$ is shown here:
+and this is what is often called a half-line or ray.
 
   ![Figure [lerp]: Linear interpolation](../images/fig.lerp.jpg)
+
+</div>
 
 <div class='together'>
 The function $p(t)$ in more verbose code form I call `ray::at(t)`:
@@ -369,7 +374,7 @@ The function $p(t)$ in more verbose code form I call `ray::at(t)`:
     #ifndef RAY_H
     #define RAY_H
 
-    #include "common/vec3.h"
+    #include "vec3.h"
 
     class ray {
         public:
@@ -385,6 +390,7 @@ The function $p(t)$ in more verbose code form I call `ray::at(t)`:
                 return orig + t*dir;
             }
 
+        public:
             vec3 orig;
             vec3 dir;
     };
@@ -427,21 +433,23 @@ for now because we’ll add antialiasing later):
     }
 
     int main() {
-        int nx = 200;
-        int ny = 100;
-        std::cout << "P3\n" << nx << " " << ny << "\n255\n";
+        const int image_width = 200;
+        const int image_height = 100;
+
+        std::cout << "P3\n" << image_width << " " << image_height << "\n255\n";
+
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C++ highlight
         vec3 lower_left_corner(-2.0, -1.0, -1.0);
         vec3 horizontal(4.0, 0.0, 0.0);
         vec3 vertical(0.0, 2.0, 0.0);
         vec3 origin(0.0, 0.0, 0.0);
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C++
-        for (int j = ny-1; j >= 0; --j) {
+        for (int j = image_height-1; j >= 0; --j) {
             std::cerr << "\rScanlines remaining: " << j << ' ' << std::flush;
-            for (int i = 0; i < nx; ++i) {
+            for (int i = 0; i < image_width; ++i) {
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C++ highlight
-                auto u = double(i) / nx;
-                auto v = double(j) / ny;
+                auto u = double(i) / image_width;
+                auto v = double(j) / image_height;
                 ray r(origin, lower_left_corner + u*horizontal + v*vertical);
                 vec3 color = ray_color(r);
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C++
@@ -469,7 +477,11 @@ interpolation”, or “lerp” for short, between two things. A lerp is always 
 
 with $t$ going from zero to one. In our case this produces:
 
+  <div class="render">
+
   ![A blue-to-white gradient depending on ray Y coordinate](../images/img.blue-to-white.png)
+
+  </div>
 
 </div>
 
@@ -481,10 +493,12 @@ Adding a Sphere
 <div class='together'>
 Let’s add a single object to our ray tracer. People often use spheres in ray tracers because
 calculating whether a ray hits a sphere is pretty straightforward. Recall that the equation for a
-sphere centered at the origin of radius $R$ is $x^2 + y^2 + z^2 = R^2$. The way you can read that
-equation is “for any $(x, y, z)$, if $x^2 + y^2 + z^2 = R^2$ then $(x,y,z)$ is on the sphere, and
-otherwise it is not”. It gets uglier if the sphere center is at
-$(\mathbf{c}_x, \mathbf{c}_y, \mathbf{c}_z)$:
+sphere centered at the origin of radius $R$ is $x^2 + y^2 + z^2 = R^2$. Put another way, if a given
+point $(x,y,z)$ is on the sphere, then $x^2 + y^2 + z^2 = R^2$. If the given point $(x,y,z)$ is
+_inside_ the sphere, then $x^2 + y^2 + z^2 < R^2$, and if a given point $(x,y,z)$ is _outside_ the
+sphere, then $x^2 + y^2 + z^2 > R^2$.
+
+It gets uglier if the sphere center is at $(\mathbf{c}_x, \mathbf{c}_y, \mathbf{c}_z)$:
 
   $$ (x-\mathbf{c}_x)^2 + (y-\mathbf{c}_y)^2 + (z-\mathbf{c}_z)^2 = R^2 $$
 </div>
@@ -516,7 +530,8 @@ for any $t$ where this is true:
 
 or expanding the full form of the ray $p(t)$:
 
-  $$ (\mathbf{a} + t \vec{\mathbf{b}} - \mathbf{c}) \cdot = R^2 $$
+  $$ (\mathbf{a} + t \vec{\mathbf{b}} - \mathbf{c})
+      \cdot (\mathbf{a} + t \vec{\mathbf{b}} - \mathbf{c}) = R^2 $$
 </div>
 
 <div class='together'>
@@ -571,7 +586,11 @@ that hits a small sphere we place at -1 on the z-axis:
 <div class='together'>
 What we get is this:
 
+  <div class="render">
+
   ![A simple red sphere](../images/img.red-sphere.png)
+
+  </div>
 
 </div>
 
@@ -587,11 +606,11 @@ Surface Normals and Multiple Objects
 ====================================================================================================
 
 First, let’s get ourselves a surface normal so we can shade. This is a vector that is perpendicular
-to the surface, and by convention, points out. One design decision is whether these normals
-(again by convention) are unit length. That is convenient for shading so I will say yes, but I won’t
-enforce that in the code. This could allow subtle bugs, so be aware this is personal preference
-as are most design decisions like that. For a sphere, the normal is in the direction of the hit
-point minus the center:
+to the surface at the point of intersection. There are two design decisions to make for normals.
+The first is whether these normals are unit length. That is convenient for shading so I will say
+yes, but I won’t enforce that in the code. This could allow subtle bugs, so be aware this is
+personal preference as are most design decisions like that. For a sphere, the outward normal is in
+the direction of the hit point minus the center:
 
   ![Figure [surf-normal]: Sphere surface-normal geometry](../images/fig.sphere-normal.jpg)
 
@@ -617,8 +636,7 @@ $\vec{\mathbf{N}}$:
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C++ highlight
         if (discriminant < 0) {
             return -1.0;
-        }
-        else {
+        } else {
             return (-b - sqrt(discriminant) ) / (2.0*a);
         }
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C++
@@ -645,11 +663,16 @@ $\vec{\mathbf{N}}$:
 <div class='together'>
 And that yields this picture:
 
+  <div class="render">
+
   ![A sphere colored according to its normal vectors](../images/img.normals-sphere.png)
+
+  </div>
 
 </div>
 
 Let’s revisit the ray-sphere equation:
+
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C++
     vec3 oc = r.origin() - center;
     auto a = dot(r.direction(), r.direction());
@@ -683,8 +706,7 @@ Using these observations, we can now simplify the sphere-intersection code to th
 
     if (discriminant < 0) {
         return -1.0;
-    }
-    else {
+    } else {
         return (-half_b - sqrt(discriminant) ) / a;
     }
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -705,8 +727,8 @@ found it convenient to add a valid interval for hits $t_{min}$ to $t_{max}$, so 
 it can help some details in the code to have an interval $t_{min}$ to $t_{max}$. One design question
 is whether to do things like compute the normal if we hit something. We might end up hitting
 something closer as we do our search, and we will only need the normal of the closest thing. I will
-go with the simple solution and compute a bundle of stuff I will store in some structure. I know
-we’ll want motion blur at some point, so I’ll add a time input variable. Here’s the abstract class:
+go with the simple solution and compute a bundle of stuff I will store in some structure. Here’s
+the abstract class:
 
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C++
     #ifndef HITTABLE_H
@@ -715,7 +737,6 @@ we’ll want motion blur at some point, so I’ll add a time input variable. Her
     #include "ray.h"
 
     struct hit_record {
-        double t;
         vec3 p;
         vec3 normal;
     };
@@ -737,15 +758,17 @@ And here’s the sphere:
     #ifndef SPHERE_H
     #define SPHERE_H
 
-    #include "common/vec3.h"
     #include "hittable.h"
+    #include "vec3.h"
 
     class sphere: public hittable {
         public:
             sphere() {}
             sphere(vec3 cen, double r) : center(cen), radius(r) {};
-            virtual bool hit(
-                const ray& r, double tmin, double tmax, hit_record& rec) const;
+
+            virtual bool hit(const ray& r, double tmin, double tmax, hit_record& rec) const;
+
+        public:
             vec3 center;
             double radius;
     };
@@ -785,34 +808,181 @@ And here’s the sphere:
 </div>
 
 <div class='together'>
-And a list of objects:
+The second design decision for normals is whether they should always point out. At present, the
+normal found will always be in the direction of the center to the intersection point (the normal
+points out). If the ray intersects the sphere from the outside, the normal points against the ray.
+If the ray intersects the sphere from the inside, the normal (which always points out) points with
+the ray. Alternatively, we can have the normal always point against the ray. If the ray is outside
+the sphere, the normal will point outward, but if the ray is inside the sphere, the normal will
+point inward.
+
+  ![Figure [normal-directions]: Possible directions for sphere surface-normal geometry](../images/fig.normal-possibilities.jpg)
+
+</div>
+
+We need to choose one of these possibilities because we will eventually want to determine which
+side of the surface that the ray is coming from. This is important for objects that are rendered
+differently on each side, like the text on a two-sided sheet of paper, or for objects that have an
+inside and an outside, like glass balls.
+
+If we decide to have the normals always point out, then we will need to determine which side the
+ray is on when we color it. We can figure this out by comparing the ray with the normal. If the ray
+and the normal face in the same direction, the ray is inside the object, if the ray and the normal
+face in the opposide direction, then the ray is outside the object. This can be determined by
+taking the dot product of the two vectors, where if their dot is positive, the ray is inside the
+sphere.
+
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C++
+    if (dot(ray_direction, outward_normal) > 0.0) {
+        // ray is inside the sphere
+        ...
+    } else {
+        // ray is outside the sphere
+        ...
+    }
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    [Listing [ray-normal-comparison]: <kbd>[sphere.h]</kbd> Comparing the ray and the normal]
+
+
+If we decide to have the normals always point against the ray, we won't be able to use the dot
+product to determine which side of the surface the ray is on. Instead, we would need to store that
+information:
+
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C++
+    bool front_face;
+    if (dot(ray_direction, outward_normal) > 0.0) {
+        // ray is inside the sphere
+        normal = -outward_normal;
+        front_face = false;
+    }
+    else {
+        // ray is outside the sphere
+        normal = outward_normal;
+        front_face = true;
+    }
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    [Listing [normals-point-against]: <kbd>[sphere.h]</kbd> Remembering the side of the surface]
+
+The decision whether to have normals always point out or always point against the ray is based on
+whether you want to determine the side of the surface at the time of geometry or at the time of
+coloring. In this book we have more material types than we have geometry types, so we'll go for
+less work and put the determination at geometry time. This is simply a matter of preference and
+you'll see both implementations in the literature.
+
+We add the `front_face` bool to the `hit_record` struct. I know that we’ll also want motion blur at
+some point, so I’ll also add a time input variable.
+
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C++
+    #ifndef HITTABLE_H
+    #define HITTABLE_H
+
+    #include "ray.h"
+
+    struct hit_record {
+        vec3 p;
+        vec3 normal;
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C++ highlight
+        double t;
+        bool front_face;
+
+        inline void set_face_normal(const ray& r, const vec3& outward_normal) {
+            front_face = dot(r.direction(), outward_normal) < 0;
+            normal = front_face ? outward_normal :-outward_normal;
+        }
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C++
+    };
+
+    class hittable {
+        public:
+            virtual bool hit(const ray& r, double t_min, double t_max, hit_record& rec) const = 0;
+    };
+
+    #endif
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    [Listing [hittable-time-side]: <kbd>[hittable.h]</kbd> The hittable class with time and side]
+
+<div class='together'>
+And then we add the surface side determination to the class:
+
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C++
+    bool sphere::hit(const ray& r, double t_min, double t_max, hit_record& rec) const {
+        vec3 oc = r.origin() - center;
+        auto a = r.direction().length_squared();
+        auto half_b = dot(oc, r.direction());
+        auto c = oc.length_squared() - radius*radius;
+        auto discriminant = half_b*half_b - a*c;
+
+        if (discriminant > 0) {
+            auto root = sqrt(discriminant);
+            auto temp = (-half_b - root)/a;
+            if (temp < t_max && temp > t_min) {
+                rec.t = temp;
+                rec.p = r.at(rec.t);
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C++ highlight
+                vec3 outward_normal = (rec.p - center) / radius;
+                rec.set_face_normal(r, outward_normal);
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C++
+                return true;
+            }
+            temp = (-half_b + root) / a;
+            if (temp < t_max && temp > t_min) {
+                rec.t = temp;
+                rec.p = r.at(rec.t);
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C++ highlight
+                vec3 outward_normal = (rec.p - center) / radius;
+                rec.set_face_normal(r, outward_normal);
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C++
+                return true;
+            }
+        }
+        return false;
+    }
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    [Listing [sphere-final]: <kbd>[sphere.h]</kbd> The `sphere` class with normal determination]
+
+</div>
+
+<div class='together'>
+We add a list of objects:
 
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C++
     #ifndef HITTABLE_LIST_H
     #define HITTABLE_LIST_H
 
     #include "hittable.h"
+    #include <memory>
+    #include <vector>
+
+    using std::shared_ptr;
+    using std::make_shared;
 
     class hittable_list: public hittable {
         public:
             hittable_list() {}
-            hittable_list(hittable **l, int n) {list = l; list_size = n; }
+            hittable_list(shared_ptr<hittable> object) { add(object); }
+
+            void clear() { objects.clear(); }
+            void add(shared_ptr<hittable> object) { objects.push_back(object); }
+
             virtual bool hit(const ray& r, double tmin, double tmax, hit_record& rec) const;
-            hittable **list;
-            int list_size;
+
+        public:
+            std::vector<shared_ptr<hittable>> objects;
     };
 
     bool hittable_list::hit(const ray& r, double t_min, double t_max, hit_record& rec) const {
         hit_record temp_rec;
         bool hit_anything = false;
-        double closest_so_far = t_max;
-        for (int i = 0; i < list_size; i++) {
-            if (list[i]->hit(r, t_min, closest_so_far, temp_rec)) {
+        auto closest_so_far = t_max;
+
+        for (const auto& object : objects) {
+            if (object->hit(r, t_min, closest_so_far, temp_rec)) {
                 hit_anything = true;
                 closest_so_far = temp_rec.t;
                 rec = temp_rec;
             }
         }
+
         return hit_anything;
     }
 
@@ -821,7 +991,61 @@ And a list of objects:
     [Listing [hittable-list-initial]: <kbd>[hittable_list.h]</kbd> The hittable_list class]
 </div>
 
-<div class='together'></div>
+## Some New C++ Features
+
+The `hittable_list` class code uses two C++ features that may trip you up if you're not normally a
+C++ programmer: `vector` and `shared_ptr`.
+
+`shared_ptr<type>` is a pointer to some allocated type, with reference-counting semantics.
+Every time you assign its value to another shared pointer (usually with a simple assignment), the
+reference count is incremented. As shared pointers go out of scope (like at the end of a block or
+function), the reference count is decremented. Once the count goes to zero, the object is deleted.
+
+<div class='together'>
+Typically, a shared pointer is first initialized with a newly-allocated object, something like this:
+
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C++
+    shared_ptr<double> double_ptr = make_shared<double>(0.37);
+    shared_ptr<vec3>   vec3_ptr   = make_shared<vec3>(1.414214, 2.718281, 1.618034);
+    shared_ptr<sphere> sphere_ptr = make_shared<sphere>(vec3(0,0,0), 1.0);
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    [Listing [shared-ptr]: An example allocation using `shared_ptr`]
+
+`make_shared<thing>(thing_constructor_params ...)` allocates a new instance of type `thing`, using
+the constructor parameters. It returns a `shared_ptr<thing>`.
+
+Since the type can be automatically deduced by the return type of `make_shared<type>(...)`, the
+above lines can be more simply expressed using C++'s `auto` type specifier:
+
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C++
+    auto double_ptr = make_shared<double>(0.37);
+    auto vec3_ptr   = make_shared<vec3>(1.414214, 2.718281, 1.618034);
+    auto sphere_ptr = make_shared<sphere>(vec3(0,0,0), 1.0);
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    [Listing [shared-ptr-auto]: An example allocation using `shared_ptr` with `auto` type]
+
+</div>
+
+We'll use shared pointers in our code, because it allows multiple geometries to share a common
+instance (for example, a bunch of spheres that all use the same texture map material), and because
+it makes memory management automatic and easier to reason about.
+
+`std::shared_ptr` is included with the `<memory>` header.
+
+The second C++ feature you may be unfamiliar with is `std::vector`. This is a generic array-like
+collection of an arbitrary type. Above, we use a collection of pointers to `hittable`. `std::vector`
+automatically grows as more values are added: `objects.push_back(object)` adds a value to the end of
+the `std::vector` member variable `objects`.
+
+`std::vector` is included with the `<vector>` header.
+
+Finally, the `using` statements in listing [hittable-list-initial] tell the compiler that we'll be
+getting `shared_ptr` and `make_shared` from the `std` library, so we don't need to prefex these with
+`std::` every time we reference them.
+
+## Common Constants and Utility Functions
+
+<div class='together'>
 We need some math constants that we conveniently define in their own header file. For now we only
 need infinity, but we will also throw our own definition of pi in there, which we will need later.
 There is no standard portable definition of pi, so we just define our own constant for it. We'll
@@ -832,8 +1056,16 @@ file.
     #ifndef RTWEEKEND_H
     #define RTWEEKEND_H
 
-    #include <limits>
     #include <cmath>
+    #include <cstdlib>
+    #include <limits>
+    #include <memory>
+
+
+    // Usings
+
+    using std::shared_ptr;
+    using std::make_shared;
 
     // Constants
 
@@ -849,37 +1081,32 @@ file.
     inline double ffmin(double a, double b) { return a <= b ? a : b; }
     inline double ffmax(double a, double b) { return a >= b ? a : b; }
 
-    inline double clamp(double x, double min, double max) {
-        if (x < min) return min;
-        if (x > max) return max;
-        return x;
-    }
-
     // Common Headers
 
-    #include "common/ray.h"
-    #include "common/vec3.h"
+    #include "ray.h"
+    #include "vec3.h"
 
     #endif
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    [Listing [rtweekend-initial]: <kbd>[common/rtweekend.h]</kbd> The rtweekend.h common header]
+    [Listing [rtweekend-initial]: <kbd>[rtweekend.h]</kbd> The rtweekend.h common header]
 </div>
 
 <div class='together'>
 And the new main:
 
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C++
-    #include "common/rtweekend.h"
+    #include "rtweekend.h"
+
     #include "hittable_list.h"
     #include "sphere.h"
 
     #include <iostream>
 
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C++ highlight
-    vec3 ray_color(const ray& r, hittable *world) {
+    vec3 ray_color(const ray& r, const hittable& world) {
         hit_record rec;
-        if (world->hit(r, 0.0, infinity, rec)) {
-            return 0.5*vec3(rec.normal.x()+1, rec.normal.y()+1, rec.normal.z()+1);
+        if (world.hit(r, 0, infinity, rec)) {
+            return 0.5 * (rec.normal + vec3(1,1,1));
         }
 
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C++
@@ -891,9 +1118,11 @@ And the new main:
     }
 
     int main() {
-        int nx = 200;
-        int ny = 100;
-        std::cout << "P3\n" << nx << ' ' << ny << "\n255\n";
+        const int image_width = 200;
+        const int image_height = 100;
+
+        std::cout << "P3\n" << image_width << ' ' << image_height << "\n255\n";
+
         vec3 lower_left_corner(-2.0, -1.0, -1.0);
         vec3 horizontal(4.0, 0.0, 0.0);
         vec3 vertical(0.0, 2.0, 0.0);
@@ -901,17 +1130,16 @@ And the new main:
 
 
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C++ highlight
-        hittable *list[2];
-        list[0] = new sphere(vec3(0,0,-1), 0.5);
-        list[1] = new sphere(vec3(0,-100.5,-1), 100);
-        hittable *world = new hittable_list(list,2);
+        hittable_list world;
+        world.add(make_shared<sphere>(vec3(0,0,-1), 0.5));
+        world.add(make_shared<sphere>(vec3(0,-100.5,-1), 100));
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C++
 
-        for (int j = ny-1; j >= 0; --j) {
+        for (int j = image_height-1; j >= 0; --j) {
             std::cerr << "\rScanlines remaining: " << j << ' ' << std::flush;
-            for (int i = 0; i < nx; ++i) {
-                auto u = double(i) / nx;
-                auto v = double(j) / ny;
+            for (int i = 0; i < image_width; ++i) {
+                auto u = double(i) / image_width;
+                auto v = double(j) / image_height;
                 ray r(origin, lower_left_corner + u*horizontal + v*vertical);
 
 
@@ -933,7 +1161,11 @@ And the new main:
 This yields a picture that is really just a visualization of where the spheres are along with their
 surface normal. This is often a great way to look at your model for flaws and characteristics.
 
+  <div class="render">
+
   ![Resulting render of normals-colored sphere with ground](../images/img.normals-sphere-ground.png)
+
+  </div>
 
 </div>
 
@@ -956,7 +1188,7 @@ $0 ≤ r < 1$. The “less than” before the 1 is important as we will sometime
 <div class='together'>
 A simple approach to this is to use the `rand()` function that can be found in `<cstdlib>`. This
 function returns a random integer in the range 0 and `RAND_MAX`. Hence we can get a real random
-number as desired with the following code snippet, added to `common/rtweekend.h`:
+number as desired with the following code snippet, added to `rtweekend.h`:
 
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C++
     #include <cstdlib>
@@ -1011,7 +1243,7 @@ before:
     #ifndef CAMERA_H
     #define CAMERA_H
 
-    #include "common/rtweekend.h"
+    #include "rtweekend.h"
 
     class camera {
         public:
@@ -1026,6 +1258,7 @@ before:
                 return ray(origin, lower_left_corner + u*horizontal + v*vertical - origin);
             }
 
+        public:
             vec3 origin;
             vec3 lower_left_corner;
             vec3 horizontal;
@@ -1052,17 +1285,17 @@ samples) when writing out the color. In addition, we'll add a handy utility func
     [Listing [clamp]: <kbd>[rtweekend.h]</kbd> The clamp() utility function]
 
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C++
-    void write_color(std::ostream &out, int num_samples) {
+    void write_color(std::ostream &out, int samples_per_pixel) {
         // Divide the color total by the number of samples.
-        auto scale = 1.0 / num_samples;
+        auto scale = 1.0 / samples_per_pixel;
         auto r = scale * e[0];
         auto g = scale * e[1];
         auto b = scale * e[2];
 
         // Write the translated [0,255] value of each color component.
-        out << static_cast<int>(256.0 * clamp(r, 0.0, 0.999999)) << ' '
-            << static_cast<int>(256.0 * clamp(g, 0.0, 0.999999)) << ' '
-            << static_cast<int>(256.0 * clamp(b, 0.0, 0.999999)) << '\n';
+        out << static_cast<int>(256 * clamp(r, 0.0, 0.999)) << ' '
+            << static_cast<int>(256 * clamp(g, 0.0, 0.999)) << ' '
+            << static_cast<int>(256 * clamp(b, 0.0, 0.999)) << '\n';
     }
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     [Listing [write-color-clamped]: <kbd>[vec3.h]</kbd> The write_color() function]
@@ -1072,33 +1305,33 @@ Main is also changed:
 
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C++
     int main() {
-        int nx = 200;
-        int ny = 100;
+        const int image_width = 200;
+        const int image_height = 100;
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C++ highlight
-        int num_samples = 100;
+        const int samples_per_pixel = 100;
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C++
-        std::cout << "P3\n" << nx << " " << ny << "\n255\n";
 
-        hittable *list[2];
-        list[0] = new sphere(vec3(0,0,-1), 0.5);
-        list[1] = new sphere(vec3(0,-100.5,-1), 100);
-        hittable *world = new hittable_list(list,2);
+        std::cout << "P3\n" << image_width << " " << image_height << "\n255\n";
+
+        hittable_list world;
+        world.add(make_shared<sphere>(vec3(0,0,-1), 0.5));
+        world.add(make_shared<sphere>(vec3(0,-100.5,-1), 100));
 
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C++ highlight
         camera cam;
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C++
-        for (int j = ny-1; j >= 0; --j) {
+        for (int j = image_height-1; j >= 0; --j) {
             std::cerr << "\rScanlines remaining: " << j << ' ' << std::flush;
-            for (int i = 0; i < nx; ++i) {
+            for (int i = 0; i < image_width; ++i) {
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C++ highlight
                 vec3 color(0, 0, 0);
-                for (int s = 0; s < num_samples; ++s) {
-                    auto u = (i + random_double()) / nx;
-                    auto v = (j + random_double()) / ny;
+                for (int s = 0; s < samples_per_pixel; ++s) {
+                    auto u = (i + random_double()) / image_width;
+                    auto v = (j + random_double()) / image_height;
                     ray r = cam.get_ray(u, v);
                     color += ray_color(r, world);
                 }
-                color.write_color(std::cout, num_samples);
+                color.write_color(std::cout, samples_per_pixel);
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C++
             }
         }
@@ -1113,7 +1346,11 @@ Main is also changed:
 Zooming into the image that is produced, the big change is in edge pixels that are part background
 and part foreground:
 
+  <div class="render">
+
   ![Close-up of antialiased pixels](../images/img.antialias.png)
+
+  </div>
 
 </div>
 
@@ -1150,12 +1387,13 @@ The correct representation of ideal Lambertian isn't much more work and is prese
 the chapter.)
 
 <div class='together'>
-There are two unit radius spheres tangent to the hit point $p$ of a surface. These two spheres
-have a center of $(p + N)$ and $(p - N)$, where $N$ is the normal of the surface. The sphere with a
-center at $(p - N)$ is considered _inside_ the surface, whereas the sphere with center $(p + N)$ is
-considered _outside_ the surface. Select the tangent unit radius sphere that is on the same side of
-the surface as the ray origin. Pick a random point $s$ inside this unit radius sphere and send a
-ray from the hit point $p$ to the random point $s$:
+There are two unit radius spheres tangent to the hit point $p$ of a surface. These two spheres have
+a center of $(p + \vec{N})$ and $(p - \vec{N})$, where $\vec{N}$ is the normal of the surface. The
+sphere with a center at $(p - \vec{N})$ is considered _inside_ the surface, whereas the sphere with
+center $(p + \vec{N})$ is considered _outside_ the surface. Select the tangent unit radius sphere
+that is on the same side of the surface as the ray origin. Pick a random point $s$ inside this unit
+radius sphere and send a ray from the hit point $p$ to the random point $s$ (this is the vector
+$(s-p)$):
 
   ![Figure [rand-vector]: Generating a random diffuse bounce ray](../images/fig.rand-vector.jpg)
 
@@ -1189,16 +1427,17 @@ range from -1 to +1. Reject this point and try again if the point is outside the
         }
     }
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    [Listing [random-in-unit-sphere]: <kbd>[material.h]</kbd> The random_in_unit_sphere() function]
+    [Listing [random-in-unit-sphere]: <kbd>[vec3.h]</kbd> The random_in_unit_sphere() function]
 </div>
 
 <div class='together'>
 Then update the `ray_color()` function to use the new random direction generator:
 
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C++
-    vec3 ray_color(const ray& r, hittable *world) {
+    vec3 ray_color(const ray& r, const hittable& world) {
         hit_record rec;
-        if (world->hit(r, 0.0, infinity, rec)) {
+
+        if (world.hit(r, 0, infinity, rec)) {
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C++ highlight
             vec3 target = rec.p + rec.normal + random_in_unit_sphere();
             return 0.5 * ray_color(ray(rec.p, target - rec.p), world);
@@ -1220,11 +1459,14 @@ time — long enough to blow the stack. To guard against that, let's limit the m
 depth, returning no light contribution at the maximum depth:
 
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C++ highlight
-    vec3 ray_color(const ray& r, hittable *world, int depth) {
+    vec3 ray_color(const ray& r, const hittable& world, int depth) {
         hit_record rec;
-        if (world->hit(r, 0.0, infinity, rec)) {
-            if (depth <= 0)
-                return vec3(0,0,0);
+
+        // If we've exceeded the ray bounce limit, no more light is gathered.
+        if (depth <= 0)
+            return vec3(0,0,0);
+
+        if (world.hit(r, 0, infinity, rec)) {
             vec3 target = rec.p + rec.normal + random_in_unit_sphere();
             return 0.5 * ray_color(ray(rec.p, target - rec.p), world, depth-1);
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C++
@@ -1236,26 +1478,27 @@ depth, returning no light contribution at the maximum depth:
     }
     ...
     int main() {
-        int nx = 200;
-        int ny = 100;
-        int num_samples = 100;
+        const int image_width = 200;
+        const int image_height = 100;
+        const int samples_per_pixel = 100;
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C++ highlight
-        int max_depth = 50;
+        const int max_depth = 50;
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C++
+
         ...
-        for (int j = ny-1; j >= 0; --j) {
+        for (int j = image_height-1; j >= 0; --j) {
             std::cerr << "\rScanlines remaining: " << j << ' ' << std::flush;
-            for (int i = 0; i < nx; ++i) {
+            for (int i = 0; i < image_width; ++i) {
                 vec3 color(0, 0, 0);
-                for (int s = 0; s < num_samples; ++s) {
-                    auto u = (i + random_double()) / nx;
-                    auto v = (j + random_double()) / ny;
+                for (int s = 0; s < samples_per_pixel; ++s) {
+                    auto u = (i + random_double()) / image_width;
+                    auto v = (j + random_double()) / image_height;
                     ray r = cam.get_ray(u, v);
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C++ highlight
                     color += ray_color(r, world, max_depth);
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C++
                 }
-                color.write_color(std::cout, num_samples);
+                color.write_color(std::cout, samples_per_pixel);
             }
         }
 
@@ -1268,7 +1511,11 @@ depth, returning no light contribution at the maximum depth:
 <div class='together'>
 This gives us:
 
+  <div class="render">
+
   ![First render of a diffuse sphere](../images/img.first-diffuse.jpg)
+
+  </div>
 
 </div>
 
@@ -1283,20 +1530,20 @@ which means raising the color to the power $1/gamma$, or in our simple case ½, 
 square-root:
 
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C++
-    void write_color(std::ostream &out, int num_samples) {
+    void write_color(std::ostream &out, int samples_per_pixel) {
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C++ highlight
         // Divide the color total by the number of samples and gamma-correct
         // for a gamma value of 2.0.
-        auto scale = 1.0 / num_samples;
+        auto scale = 1.0 / samples_per_pixel;
         auto r = sqrt(scale * e[0]);
         auto g = sqrt(scale * e[1]);
         auto b = sqrt(scale * e[2]);
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C++
 
         // Write the translated [0,255] value of each color component.
-        out << static_cast<int>(256.0 * clamp(r, 0.0, 0.999999)) << ' '
-            << static_cast<int>(256.0 * clamp(g, 0.0, 0.999999)) << ' '
-            << static_cast<int>(256.0 * clamp(b, 0.0, 0.999999)) << '\n';
+        out << static_cast<int>(256 * clamp(r, 0.0, 0.999)) << ' '
+            << static_cast<int>(256 * clamp(g, 0.0, 0.999)) << ' '
+            << static_cast<int>(256 * clamp(b, 0.0, 0.999)) << '\n';
     }
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     [Listing [write-color-gamma]: <kbd>[vec3.h]</kbd> write_color(), with gamma correction]
@@ -1306,7 +1553,11 @@ square-root:
 <div class='together'>
 That yields light grey, as we desire:
 
+  <div class="render">
+
   ![Diffuse sphere, with gamma correction](../images/img.gamma-correct.jpg)
+
+  </div>
 
 </div>
 
@@ -1316,7 +1567,7 @@ off of not at exactly $t=0$, but instead at $t=-0.0000001$ or $t=0.00000001$ or 
 point approximation the sphere intersector gives us. So we need to ignore hits very near zero:
 
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C++
-    if (world->hit(r, 0.001, infinity, rec)) {
+    if (world.hit(r, 0.001, infinity, rec)) {
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     [Listing [reflect-tolerance]: <kbd>[main.cc]</kbd> Calculating reflected ray origins with tolerance]
 
@@ -1348,7 +1599,7 @@ the unit ball, and then normalizing those.
     [Listing [random-unit-vector]: <kbd>[vec3.h]</kbd> The random_unit_vector() function]
 
   ![Figure [rand-unit-vector]: Generating a random unit vector](../images/fig.rand-unitvector.png)
-  
+
 </div>
 
 
@@ -1357,11 +1608,14 @@ This `random_unit_vector()` is a drop-in replacement for the existing `random_in
 function.
 
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C++
-    vec3 ray_color(const ray& r, hittable *world, int depth) {
+    vec3 ray_color(const ray& r, const hittable& world, int depth) {
         hit_record rec;
-        if (world->hit(r, 0.0, infinity, rec)) {
-            if (depth <= 0)
-                return vec3(0,0,0);
+
+        // If we've exceeded the ray bounce limit, no more light is gathered.
+        if (depth <= 0)
+            return vec3(0,0,0);
+
+        if (world.hit(r, 0.001, infinity, rec)) {
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C++ highlight
             vec3 target = rec.p + rec.normal + random_unit_vector();
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C++
@@ -1370,7 +1624,7 @@ function.
 
         vec3 unit_direction = unit_vector(r.direction());
         auto t = 0.5*(unit_direction.y() + 1.0);
-        return (1-t)*vec3(1, 1, 1) + t*vec3(0.5, 0.7, 1.0);
+        return (1.0-t)*vec3(1.0, 1.0, 1.0) + t*vec3(0.5, 0.7, 1.0);
     }
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     [Listing [ray-color-unit-sphere]: <kbd>[main.cc]</kbd> ray_color() with replacement diffuse]
@@ -1379,7 +1633,11 @@ function.
 <div class='together'>
 After rendering we get a similar image:
 
+  <div class="render">
+
   ![Correct rendering of Lambertian spheres](../images/img.correct-lambertian.png)
+
+  </div>
 
 It's hard to tell the difference between these two diffuse methods, given that our scene of two
 spheres is so simple, but you should be able to notice two important visual differences:
@@ -1432,11 +1690,14 @@ this diffuse method (before adopting Lambertian diffuse).
 Plugging the new formula into the `ray_color()` function:
 
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C++
-    vec3 ray_color(const ray& r, hittable *world, int depth) {
+    vec3 ray_color(const ray& r, const hittable& world, int depth) {
         hit_record rec;
-        if (world->hit(r, 0.0, infinity, rec)) {
-            if (depth <= 0)
-                return vec3(0,0,0);
+
+        // If we've exceeded the ray bounce limit, no more light is gathered.
+        if (depth <= 0)
+            return vec3(0,0,0);
+
+        if (world.hit(r, 0.001, infinity, rec)) {
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C++ highlight
             vec3 target = rec.p + random_in_hemisphere(rec.normal);
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C++
@@ -1452,7 +1713,12 @@ Plugging the new formula into the `ray_color()` function:
 
 Gives us the following image:
 
-  ![Rendering of diffuse spheres with hemispherical scattering](../images/fig.rand-hemispherical.png)
+  <div class="render">
+
+  ![Rendering of diffuse spheres with hemispherical scattering](../images/img.rand-hemispherical.png)
+
+  </div>
+
 </div>
 
 <div class='together'>
@@ -1498,7 +1764,7 @@ that the pointer is to a class, which the “class material” in the hittable c
     #ifndef HITTABLE_H
     #define HITTABLE_H
 
-    #include "common/rtweekend.h"
+    #include "rtweekend.h"
     #include "ray.h"
 
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C++ highlight
@@ -1506,12 +1772,19 @@ that the pointer is to a class, which the “class material” in the hittable c
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C++
 
     struct hit_record {
-        double t;
         vec3 p;
         vec3 normal;
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C++ highlight
-        material *mat_ptr;
+        shared_ptr<material> mat_ptr;
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C++
+        double t;
+        bool front_face;
+
+
+        inline void set_face_normal(const ray& r, const vec3& outward_normal) {
+            front_face = dot(r.direction(), outward_normal) < 0;
+            normal = front_face ? outward_normal :-outward_normal;
+        }
     };
 
     class hittable {
@@ -1539,12 +1812,18 @@ within `hit_record`. See the highlighted lines below:
     class sphere: public hittable {
         public:
             sphere() {}
-            sphere(vec3 cen, double r, material *m) : center(cen), radius(r), mat_ptr(m) {};
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C++ highlight
+            sphere(vec3 cen, double r, shared_ptr<material> m)
+                : center(cen), radius(r), mat_ptr(m) {};
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C++
+
             virtual bool hit(const ray& r, double tmin, double tmax, hit_record& rec) const;
+
+        public:
             vec3 center;
             double radius;
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C++ highlight
-            material *mat_ptr;
+            shared_ptr<material> mat_ptr;
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C++
     };
 
@@ -1561,7 +1840,8 @@ within `hit_record`. See the highlighted lines below:
             if (temp < t_max && temp > t_min) {
                 rec.t = temp;
                 rec.p = r.at(rec.t);
-                rec.normal = (rec.p - center) / radius;
+                vec3 outward_normal = (rec.p - center) / radius;
+                rec.set_face_normal(r, outward_normal);
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C++ highlight
                 rec.mat_ptr = mat_ptr;
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C++
@@ -1571,7 +1851,8 @@ within `hit_record`. See the highlighted lines below:
             if (temp < t_max && temp > t_min) {
                 rec.t = temp;
                 rec.p = r.at(rec.t);
-                rec.normal = (rec.p - center) / radius;
+                vec3 outward_normal = (rec.p - center) / radius;                
+                rec.set_face_normal(r, outward_normal);
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C++ highlight
                 rec.mat_ptr = mat_ptr;
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C++
@@ -1597,12 +1878,13 @@ it could be a mixture of those strategies. For Lambertian materials we get this 
             virtual bool scatter(
                 const ray& r_in, const hit_record& rec, vec3& attenuation, ray& scattered
             ) const {
-                vec3 target = rec.p + rec.normal + random_unit_vector();
-                scattered = ray(rec.p, target-rec.p);
+                vec3 scatter_direction = rec.normal + random_unit_vector();
+                scattered = ray(rec.p, scatter_direction);
                 attenuation = albedo;
                 return true;
             }
 
+        public:
             vec3 albedo;
     };
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -1650,6 +1932,8 @@ The metal material just reflects rays using that formula:
                 attenuation = albedo;
                 return (dot(scattered.direction(), rec.normal) > 0);
             }
+
+        public:
             vec3 albedo;
     };
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -1660,12 +1944,15 @@ The metal material just reflects rays using that formula:
 We need to modify the color function to use this:
 
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C++
-    vec3 ray_color(const ray& r, hittable *world, int depth) {
+    vec3 ray_color(const ray& r, const hittable& world, int depth) {
         hit_record rec;
+
+        // If we've exceeded the ray bounce limit, no more light is gathered.
+        if (depth <= 0)
+            return vec3(0,0,0);
+
+        if (world.hit(r, 0.001, infinity, rec)) {
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C++ highlight
-        if (world->hit(r, 0.001, infinity, rec)) {
-            if (depth <= 0)
-                return vec3(0,0,0);
             ray scattered;
             vec3 attenuation;
             if (rec.mat_ptr->scatter(r, rec, attenuation, scattered))
@@ -1683,39 +1970,43 @@ We need to modify the color function to use this:
 </div>
 
 <div class='together'>
-You will also need to modify the sphere class to have a material pointer to it. And add some
-metal spheres:
+Now let’s add some metal spheres to our scene:
 
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C++
     int main() {
-        int nx = 200;
-        int ny = 100;
-        int num_samples = 100;
-        int max_depth = 50;
-        std::cout << "P3\n" << nx << " " << ny << "\n255\n";
+        const int image_width = 200;
+        const int image_height = 100;
+        const int samples_per_pixel = 100;
+        const int max_depth = 50;
+
+        std::cout << "P3\n" << image_width << " " << image_height << "\n255\n";
 
 
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C++ highlight
-        hittable *list[4];
-        list[0] = new sphere(vec3(0,0,-1), 0.5, new lambertian(vec3(0.7, 0.3, 0.3)));
-        list[1] = new sphere(vec3(0,-100.5,-1), 100, new lambertian(vec3(0.8, 0.8, 0.0)));
-        list[2] = new sphere(vec3(1,0,-1), 0.5, new metal(vec3(0.8, 0.6, 0.2)));
-        list[3] = new sphere(vec3(-1,0,-1), 0.5, new metal(vec3(0.8, 0.8, 0.8)));
-        hittable *world = new hittable_list(list,4);
+        hittable_list world;
+
+        world.add(make_shared<sphere>(
+            vec3(0,0,-1), 0.5, make_shared<lambertian>(vec3(0.7, 0.3, 0.3))));
+
+        world.add(make_shared<sphere>(
+            vec3(0,-100.5,-1), 100, make_shared<lambertian>(vec3(0.8, 0.8, 0.0))));
+
+        world.add(make_shared<sphere>(vec3(1,0,-1), 0.5, make_shared<metal>(vec3(0.8, 0.6, 0.2))));
+        world.add(make_shared<sphere>(vec3(-1,0,-1), 0.5, make_shared<metal>(vec3(0.8, 0.8, 0.8))));
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C++
 
         camera cam;
-        for (int j = ny-1; j >= 0; --j) {
+        for (int j = image_height-1; j >= 0; --j) {
             std::cerr << "\rScanlines remaining: " << j << ' ' << std::flush;
-            for (int i = 0; i < nx; ++i) {
+            for (int i = 0; i < image_width; ++i) {
                 vec3 color(0, 0, 0);
-                for (int s = 0; s < num_samples; ++s) {
-                    auto u = (i + random_double()) / nx;
-                    auto v = (j + random_double()) / ny;
+                for (int s = 0; s < samples_per_pixel; ++s) {
+                    auto u = (i + random_double()) / image_width;
+                    auto v = (j + random_double()) / image_height;
                     ray r = cam.get_ray(u, v);
                     color += ray_color(r, world, max_depth);
                 }
-                color.write_color(std::cout, num_samples);
+                color.write_color(std::cout, samples_per_pixel);
             }
         }
 
@@ -1728,7 +2019,11 @@ metal spheres:
 <div class='together'>
 Which gives:
 
+  <div class="render">
+
   ![Shiny metal](../images/img.metal-shiny.png)
+
+  </div>
 
 </div>
 
@@ -1763,6 +2058,8 @@ absorb those.
                 attenuation = albedo;
                 return (dot(scattered.direction(), rec.normal) > 0);
             }
+
+        public:
             vec3 albedo;
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C++ highlight
             double fuzz;
@@ -1776,7 +2073,11 @@ absorb those.
 <div class='together'>
 We can try that out by adding fuzziness 0.3 and 1.0 to the metals:
 
+  <div class="render">
+
   ![Fuzzed metal](../images/img.metal-fuzz.png)
+
+  </div>
 
 </div>
 
@@ -1794,7 +2095,11 @@ The hardest part to debug is the refracted ray. I usually first just have all th
 there is a refraction ray at all. For this project, I tried to put two glass balls in our scene, and
 I got this (I have not told you how to do this right or wrong yet, but soon!):
 
-  ![Image 10-1](../images/img.glass-first.png)
+  <div class="render">
+
+  ![Glass first](../images/img.glass-first.png)
+
+  </div>
 
 </div>
 
@@ -1805,40 +2110,64 @@ of the image and it was clearly wrong. That often does the job.
 <div class='together'>
 The refraction is described by Snell’s law:
 
-  $$ n \cdot \sin\theta = n' \cdot \sin\theta' $$
+  $$ \eta \cdot \sin\theta = \eta' \cdot \sin\theta' $$
 
-Where $n$ and $n'$ are the refractive indices (typically air = 1, glass = 1.3–1.7, diamond = 2.4)
-and the geometry is:
+Where $\theta$ and $\theta'$ are the angles from the normal, and $\eta$ and $\eta'$ (pronounced
+"eta" and "eta prime") are the refractive indices (typically air = 1.0, glass = 1.3–1.7, diamond =
+2.4). The geometry is:
 
   ![Figure [ray-refract]: Refracted ray geometry](../images/fig.ray-refract.jpg)
 
 </div>
 
 <div class='together'>
-One troublesome practical issue is that when the ray is in the material with the higher refractive
-index, there is no real solution to Snell’s law and thus there is no refraction possible. Here all
-the light is reflected, and because in practice that is usually inside solid objects, it is called
-“total internal reflection”. This is why sometimes the water-air boundary acts as a perfect mirror
-when you are submerged. The code for refraction is thus a bit more complicated than for reflection:
+In order to determine the direction of the refracted ray, we have to solve for $\sin\theta'$:
+
+  $$ \sin\theta' = \frac{\eta}{\eta'} \cdot \sin\theta $$
+
+On the refracted side of the surface there is a refracted ray $\mathbf{R'}$ and a normal
+$\mathbf{N'}$, and there exists an angle, $\theta'$, between them. We can split $\mathbf{R'}$ into
+the parts of the ray that are parallel to $\mathbf{N'}$ and perpendicular to $\mathbf{N'}$:
+
+  $$ \mathbf{R'} = \mathbf{R'}_{\parallel} + \mathbf{R'}_{\bot} $$
+
+If we solve for $\mathbf{R'}_{\parallel}$ and $\mathbf{R'}_{\bot}$ we get:
+
+  $$ \mathbf{R'}_{\parallel} = \frac{\eta}{\eta'} (\mathbf{R} + \cos\theta \mathbf{N}) $$
+  $$ \mathbf{R'}_{\bot} = -\sqrt{1 - |\mathbf{R'}_{\parallel}|^2} \mathbf{N} $$
+
+You can go ahead and prove this for yourself if you want, but we will treat it as fact and move on.
+The rest of the book will not require you to understand the proof.
+
+We still need to solve for $\cos\theta$. It is well known that the dot product of two vectors can
+be explained in terms of the consine of the angle between them:
+
+  $$ \mathbf{A} \cdot \mathbf{B} = |\mathbf{A}| |\mathbf{B}| \cos\theta $$
+
+If we restrict $\mathbf{A}$ and $\mathbf{B}$ to be unit vectors:
+
+  $$ \mathbf{A} \cdot \mathbf{B} = \cos\theta $$
+
+We can now rewrite $\mathbf{R'}_{\parallel}$ in terms of known quantities:
+
+  $$ \mathbf{R'}_{\parallel} =
+     \frac{\eta}{\eta'} (\mathbf{R} + (\mathbf{-R} \cdot \mathbf{N}) \mathbf{N}) $$
+
+When we combine them back together, we can write a function to calculate $\mathbf{R'}$:
 
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C++
-    bool refract(const vec3& v, const vec3& n, double ni_over_nt, vec3& refracted) {
-        vec3 uv = unit_vector(v);
-        auto dt = dot(uv, n);
-        auto discriminant = 1.0 - ni_over_nt*ni_over_nt*(1-dt*dt);
-
-        if (discriminant <= 0) {
-            return false;
-
-        refracted = ni_over_nt*(uv - n*dt) - n*sqrt(discriminant);
-        return true;
+    vec3 refract(const vec3& uv, const vec3& n, double etai_over_etat) {
+        auto cos_theta = dot(-uv, n);
+        vec3 r_out_parallel =  etai_over_etat * (uv + cos_theta*n);
+        vec3 r_out_perp = -sqrt(1.0 - r_out_parallel.length_squared()) * n;
+        return r_out_parallel + r_out_perp;
     }
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     [Listing [refract]: <kbd>[vec3.h]</kbd> Refraction function]
 </div>
 
 <div class='together'>
-And the dielectric material that always refracts when possible is:
+And the dielectric material that always refracts is:
 
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C++
     class dielectric : public material {
@@ -1848,63 +2177,153 @@ And the dielectric material that always refracts when possible is:
             virtual bool scatter(
                 const ray& r_in, const hit_record& rec, vec3& attenuation, ray& scattered
             ) const {
-                vec3 outward_normal;
-                vec3 reflected = reflect(r_in.direction(), rec.normal);
-                double ni_over_nt;
-                attenuation = vec3(1.0, 1.0, 0.0);
-                vec3 refracted;
-
-                if (dot(r_in.direction(), rec.normal) > 0) {
-                    outward_normal = -rec.normal;
-                    ni_over_nt = ref_idx;
+                attenuation = vec3(1.0, 1.0, 1.0);
+                double etai_over_etat;
+                if (rec.front_face) {
+                    etai_over_etat = 1.0 / ref_idx;
                 } else {
-                    outward_normal = rec.normal;
-                    ni_over_nt = 1.0 / ref_idx;
+                    etai_over_etat = ref_idx;
                 }
 
-                if (refract(r_in.direction(), outward_normal, ni_over_nt, refracted)) {
-                    scattered = ray(rec.p, refracted);
-                } else {
-                    scattered = ray(rec.p, reflected);
-                    return false;
-                }
-
+                vec3 unit_direction = unit_vector(r_in.direction());
+                vec3 refracted = refract(unit_direction, rec.normal, etai_over_etat);
+                scattered = ray(rec.p, refracted);
                 return true;
             }
 
             double ref_idx;
     };
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    [Listing [dielectric]: <kbd>[material.h]</kbd> Dielectric material class]
+    [Listing [dielectric]: <kbd>[material.h]</kbd> Dielectric material class that always refracts]
+
+  <div class="render">
+
+  ![Glass sphere that always refracts](../images/img.glass-always-refract.png)
+
+  </div>
 </div>
 
-Attenuation is always 1 -- the glass surface absorbs nothing. The `attenuation = vec3(1.0, 1.0,
-0.0)` above will also kill the blue channel which is the type of color bug that can be hard to find
--- it will give a color shift only. Try it the way it is and then change it to
-`attenuation = vec3(1.0, 1.0, 1.0)` to see the difference.
 
 <div class='together'>
-If we try that out with these parameters:
+That definitely doesn't look right. One troublesome practical issue is that when the ray is in the
+material with the higher refractive index, there is no real solution to Snell’s law and thus there
+is no refraction possible. If we refer back to Snell's law and the derivation of $\sin\theta'$:
+
+  $$ \sin\theta' = \frac{\eta}{\eta'} \cdot \sin\theta $$
+
+If the ray is inside glass and outside is air ($\eta = 1.5$ and $\eta' = 1.0$):
+
+  $$ \sin\theta' = \frac{1.5}{1.0} \cdot \sin\theta $$
+
+The value of $\sin\theta'$ cannot be greater than 1. So, if,
+
+  $$ \frac{1.5}{1.0} \cdot \sin\theta > 1.0 $$
+
+The equality between the two sides of the equation is broken and a solution cannot exist. If a
+solution does not exist the glass cannot refract and must reflect the ray:
 
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C++
-    list[0] = new sphere(vec3(0,0,-1), 0.5, new lambertian(vec3(0.1, 0.2, 0.5)));
-    list[1] = new sphere(vec3(0,-100.5,-1), 100, new lambertian(vec3(0.8, 0.8, 0.0)));
-    list[2] = new sphere(vec3(1,0,-1), 0.5, new metal(vec3(0.8, 0.6, 0.2), 0.0));
-    list[3] = new sphere(vec3(-1,0,-1), 0.5, new dielectric(1.5));
+    if(etai_over_etat * sin_theta > 1.0) {
+        // Must Reflect
+        ...
+    }
+    else {
+        // Can Refract
+        ...
+    }
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    [Listing [dielectric]: <kbd>[material.h]</kbd> Determining if the ray can refract]
+
+Here all the light is reflected, and because in practice that is usually inside solid objects, it
+is called “total internal reflection”. This is why sometimes the water-air boundary acts as a
+perfect mirror when you are submerged.
+</div>
+
+<div class='together'>
+We can solve for `sin_theta` using the trigonometric qualities:
+
+  $$ \sin\theta  = \sqrt{1 - \cos^2\theta} $$
+
+and
+
+  $$ \cos\theta = \mathbf{R} \cdot \mathbf{N} $$
+
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C++
+    double cos_theta = ffmin(dot(-unit_direction, rec.normal), 1.0);
+    double sin_theta = sqrt(1.0 - cos_theta*cos_theta);
+    if(etai_over_etat * sin_theta > 1.0) {
+        // Must Reflect
+        ...
+    }
+    else {
+        // Can Refract
+        ...
+    }
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    [Listing [dielectric]: <kbd>[material.h]</kbd> Determining if the ray can refract]
+
+</div>
+
+<div class='together'>
+And the dielectric material that always refracts (when possible) is:
+
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C++
+    class dielectric : public material {
+        public:
+            dielectric(double ri) : ref_idx(ri) {}
+
+            virtual bool scatter(
+                const ray& r_in, const hit_record& rec, vec3& attenuation, ray& scattered
+            ) const {
+                attenuation = vec3(1.0, 1.0, 1.0);
+                double etai_over_etat = (rec.front_face) ? (1.0 / ref_idx) : (ref_idx);
+
+                vec3 unit_direction = unit_vector(r_in.direction());
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C++ highlight
+                double cos_theta = ffmin(dot(-unit_direction, rec.normal), 1.0);
+                double sin_theta = sqrt(1.0 - cos_theta*cos_theta);
+                if (etai_over_etat * sin_theta > 1.0 ) {
+                    vec3 reflected = reflect(unit_direction, rec.normal);
+                    scattered = ray(rec.p, reflected);
+                    return true;
+                }
+
+                vec3 refracted = refract(unit_direction, rec.normal, etai_over_etat);
+                scattered = ray(rec.p, refracted);
+                return true;
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C++
+            }
+
+        public:
+            double ref_idx;
+    };
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    [Listing [dielectric]: <kbd>[material.h]</kbd> Dielectric material class with reflection]
+</div>
+
+<div class='together'>
+Attenuation is always 1 -- the glass surface absorbs nothing. If we try that out with these parameters:
+
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C++
+    world.add(make_shared<sphere>(
+        vec3(0,0,-1), 0.5, make_shared<lambertian>(vec3(0.1, 0.2, 0.5))));
+
+    world.add(make_shared<sphere>(
+        vec3(0,-100.5,-1), 100, make_shared<lambertian>(vec3(0.8, 0.8, 0.0))));
+
+    world.add(make_shared<sphere>(vec3(1,0,-1), 0.5, make_shared<metal>(vec3(0.8, 0.6, 0.2), 0.0)));
+    world.add(make_shared<sphere>(vec3(-1,0,-1), 0.5, make_shared<dielectric>(1.5)));
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     [Listing [scene-dielectric]: <kbd>[main.cc]</kbd> Scene with dielectric sphere]
 
 We get:
 
-  ![Glass sphere with a subtle bug](../images/img.glass-no-reflect.png)
+  <div class="render">
 
+  ![Glass sphere that sometimes refracts](../images/img.glass-sometimes-refract.png)
+
+  </div>
 </div>
-
-(The reader Becker has pointed out that when there is a reflection ray the function returns `false`
-so there are no reflections. He is right, and that is why there are none in the image above. I am
-leaving this in rather than correcting it because it is an interesting example of a major bug that
-still leaves a reasonably plausible image. These sleeper bugs are the hardest bugs to find because
-we humans are not designed to find fault with what we see.)
 
 <div class='together'>
 Now real glass has reflectivity that varies with angle -- look at a window at a steep angle and it
@@ -1923,62 +2342,40 @@ surprisingly simple polynomial approximation by Christophe Schlick:
 
 <div class='together'>
 This yields our full glass material:
-
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C++
     class dielectric : public material {
         public:
             dielectric(double ri) : ref_idx(ri) {}
+
             virtual bool scatter(
                 const ray& r_in, const hit_record& rec, vec3& attenuation, ray& scattered
             ) const {
-                vec3 outward_normal;
-                vec3 reflected = reflect(r_in.direction(), rec.normal);
-                double ni_over_nt;
                 attenuation = vec3(1.0, 1.0, 1.0);
-                vec3 refracted;
+                double etai_over_etat = (rec.front_face) ? (1.0 / ref_idx) : (ref_idx);
 
-
+                vec3 unit_direction = unit_vector(r_in.direction());
+                double cos_theta = ffmin(dot(-unit_direction, rec.normal), 1.0);
+                double sin_theta = sqrt(1.0 - cos_theta*cos_theta);
+                if (etai_over_etat * sin_theta > 1.0 ) {
+                    vec3 reflected = reflect(unit_direction, rec.normal);
+                    scattered = ray(rec.p, reflected);
+                    return true;
+                }
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C++ highlight
-                double reflect_prob;
-                double cosine;
-    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C++
-
-                if (dot(r_in.direction(), rec.normal) > 0) {
-                     outward_normal = -rec.normal;
-                     ni_over_nt = ref_idx;
-    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C++ highlight
-                     cosine = ref_idx * dot(r_in.direction(), rec.normal)
-                            / r_in.direction().length();
-    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C++
-                }
-                else {
-                     outward_normal = rec.normal;
-                     ni_over_nt = 1.0 / ref_idx;
-    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C++ highlight
-                     cosine = -dot(r_in.direction(), rec.normal)
-                            / r_in.direction().length();
-    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C++
-                }
-
-                if (refract(r_in.direction(), outward_normal, ni_over_nt, refracted)) {
-    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C++ highlight
-                   reflect_prob = schlick(cosine, ref_idx);
-                }
-                else {
-                   reflect_prob = 1.0;
-                }
-
-                if (random_double() < reflect_prob) {
-                   scattered = ray(rec.p, reflected);
-                }
-                else {
-                   scattered = ray(rec.p, refracted);
+                double reflect_prob = schlick(cos_theta, etai_over_etat);
+                if (random_double() < reflect_prob)
+                {
+                    vec3 reflected = reflect(unit_direction, rec.normal);
+                    scattered = ray(rec.p, reflected);
+                    return true;
                 }
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C++
-
+                vec3 refracted = refract(unit_direction, rec.normal, etai_over_etat);
+                scattered = ray(rec.p, refracted);
                 return true;
             }
 
+        public:
             double ref_idx;
     };
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -1991,11 +2388,12 @@ the geometry is unaffected but the surface normal points inward, so it can be us
 to make a hollow glass sphere:
 
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C++
-    list[0] = new sphere(vec3(0,0,-1), 0.5, new lambertian(vec3(0.1, 0.2, 0.5)));
-    list[1] = new sphere(vec3(0,-100.5,-1), 100, new lambertian(vec3(0.8, 0.8, 0.0)));
-    list[2] = new sphere(vec3(1,0,-1), 0.5, new metal(vec3(0.8, 0.6, 0.2), 0.3));
-    list[3] = new sphere(vec3(-1,0,-1), 0.5, new dielectric(1.5));
-    list[4] = new sphere(vec3(-1,0,-1), -0.45, new dielectric(1.5));
+    world.add(make_shared<sphere>(vec3(0,0,-1), 0.5, make_shared<lambertian>(vec3(0.1, 0.2, 0.5))));
+    world.add(make_shared<sphere>(
+        vec3(0,-100.5,-1), 100, make_shared<lambertian>(vec3(0.8, 0.8, 0.0))));
+    world.add(make_shared<sphere>(vec3(1,0,-1), 0.5, make_shared<metal>(vec3(0.8, 0.6, 0.2), 0.3)));
+    world.add(make_shared<sphere>(vec3(-1,0,-1), 0.5, make_shared<dielectric>(1.5)));
+    world.add(make_shared<sphere>(vec3(-1,0,-1), -0.45, make_shared<dielectric>(1.5)));
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     [Listing [scene-hollow-glass]: <kbd>[main.cc]</kbd> Scene with hollow glass sphere]
 </div>
@@ -2003,10 +2401,13 @@ to make a hollow glass sphere:
 <div class='together'>
 This gives:
 
+  <div class="render">
+
   ![A hollow glass sphere](../images/img.glass-hollow.png)
 
-</div>
+  </div>
 
+</div>
 
 
 Positionable Camera
@@ -2054,6 +2455,7 @@ This implies $h = \tan(\frac{\theta}{2})$. Our camera now becomes:
                 return ray(origin, lower_left_corner + u*horizontal + v*vertical - origin);
             }
 
+        public:
             vec3 origin;
             vec3 lower_left_corner;
             vec3 horizontal;
@@ -2064,19 +2466,23 @@ This implies $h = \tan(\frac{\theta}{2})$. Our camera now becomes:
 </div>
 
 <div class='together'>
-When calling it with camera `cam(90, double(nx)/ny)` and these spheres:
+When calling it with camera `cam(90, double(image_width)/image_height)` and these spheres:
 
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C++
     auto R = cos(pi/4);
-    list[0] = new sphere(vec3(-R,0,-1), R, new lambertian(vec3(0, 0, 1)));
-    list[1] = new sphere(vec3( R,0,-1), R, new lambertian(vec3(1, 0, 0)));
-    hittable *world = new hittable_list(list,2);
+    hittable_list world;
+    world.add(make_shared<sphere>(vec3(-R,0,-1), R, make_shared<lambertian>(vec3(0, 0, 1))));
+    world.add(make_shared<sphere>(vec3( R,0,-1), R, make_shared<lambertian>(vec3(1, 0, 0))));
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     [Listing [scene-wide-angle]: <kbd>[main.cc]</kbd> Scene with wide-angle camera]
 
 gives:
 
+  <div class="render">
+
   ![A wide-angle view](../images/img.wide-view.png)
+
+  </div>
 
 </div>
 
@@ -2138,6 +2544,7 @@ camera horizontally level until you decide to experiment with crazy camera angle
                 return ray(origin, lower_left_corner + s*horizontal + t*vertical - origin);
             }
 
+        public:
             vec3 origin;
             vec3 lower_left_corner;
             vec3 horizontal;
@@ -2150,17 +2557,27 @@ camera horizontally level until you decide to experiment with crazy camera angle
 This allows us to change the viewpoint:
 
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C++
-    camera cam(vec3(-2,2,1), vec3(0,0,-1), vec3(0,1,0), 90, double(nx)/ny);
+    const auto aspect_ratio = double(image_width) / image_height;
+    ...
+    camera cam(vec3(-2,2,1), vec3(0,0,-1), vup, 90, aspect_ratio);
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     [Listing [scene-free-view]: <kbd>[main.cc]</kbd> Scene with alternate viewpoint]
 
 to get:
 
+  <div class="render">
+
   ![A distant view](../images/img.view-distant.png)
+
+  </div>
 
 And we can change field of view to get:
 
+  <div class="render">
+
   ![Zooming in](../images/img.view-zoom.png)
+
+  </div>
 
 </div>
 
@@ -2267,6 +2684,7 @@ defocus disk of radius zero (no blur at all), so all rays originated at the disk
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C++
             }
 
+        public:
             vec3 origin;
             vec3 lower_left_corner;
             vec3 horizontal;
@@ -2283,18 +2701,25 @@ defocus disk of radius zero (no blur at all), so all rays originated at the disk
 Using a big aperture:
 
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C++
+    const auto aspect_ratio = double(image_width) / image_height;
+    ...
     vec3 lookfrom(3,3,2);
     vec3 lookat(0,0,-1);
+    vec3 vup(0,1,0);
     auto dist_to_focus = (lookfrom-lookat).length();
     auto aperture = 2.0;
 
-    camera cam(lookfrom, lookat, vec3(0,1,0), 20, double(nx)/ny, aperture, dist_to_focus);
+    camera cam(lookfrom, lookat, vup, 20, aspect_ratio, aperture, dist_to_focus);
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     [Listing [scene-camera-dof]: <kbd>[main.cc]</kbd> Scene camera with depth-of-field]
 
 We get:
 
+  <div class="render">
+
   ![Spheres with depth-of-field](../images/img.depth-of-field.png)
+
+  </div>
 
 </div>
 
@@ -2307,38 +2732,60 @@ Where Next?
 First let’s make the image on the cover of this book -- lots of random spheres:
 
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C++
-    hittable *random_scene() {
-        int n = 500;
-        hittable **list = new hittable*[n+1];
-        list[0] =  new sphere(vec3(0,-1000,0), 1000, new lambertian(vec3(0.5, 0.5, 0.5)));
+    hittable_list random_scene() {
+        hittable_list world;
+
+        world.add(make_shared<sphere>(
+            vec3(0,-1000,0), 1000, make_shared<lambertian>(vec3(0.5, 0.5, 0.5))));
+
         int i = 1;
         for (int a = -11; a < 11; a++) {
             for (int b = -11; b < 11; b++) {
                 auto choose_mat = random_double();
                 vec3 center(a + 0.9*random_double(), 0.2, b + 0.9*random_double());
-                if ((center-vec3(4,0.2,0)).length() > 0.9) {
+                if ((center - vec3(4, 0.2, 0)).length() > 0.9) {
                     if (choose_mat < 0.8) {
                         // diffuse
                         auto albedo = vec3::random() * vec3::random();
-                        list[i++] = new sphere(center, 0.2, new lambertian(albedo));
+                        world.add(
+                            make_shared<sphere>(center, 0.2, make_shared<lambertian>(albedo)));
                     } else if (choose_mat < 0.95) {
                         // metal
                         auto albedo = vec3::random(.5, 1);
                         auto fuzz = random_double(0, .5);
-                        list[i++] = new sphere(center, 0.2, new metal(albedo, fuzz));
+                        world.add(
+                            make_shared<sphere>(center, 0.2, make_shared<metal>(albedo, fuzz)));
                     } else {
                         // glass
-                        list[i++] = new sphere(center, 0.2, new dielectric(1.5));
+                        world.add(make_shared<sphere>(center, 0.2, make_shared<dielectric>(1.5)));
                     }
                 }
             }
         }
 
-        list[i++] = new sphere(vec3(0, 1, 0), 1.0, new dielectric(1.5));
-        list[i++] = new sphere(vec3(-4, 1, 0), 1.0, new lambertian(vec3(0.4, 0.2, 0.1)));
-        list[i++] = new sphere(vec3(4, 1, 0), 1.0, new metal(vec3(0.7, 0.6, 0.5), 0.0));
+        world.add(make_shared<sphere>(vec3(0, 1, 0), 1.0, make_shared<dielectric>(1.5)));
 
-        return new hittable_list(list,i);
+        world.add(
+            make_shared<sphere>(vec3(-4, 1, 0), 1.0, make_shared<lambertian>(vec3(0.4, 0.2, 0.1))));
+
+        world.add(
+            make_shared<sphere>(vec3(4, 1, 0), 1.0, make_shared<metal>(vec3(0.7, 0.6, 0.5), 0.0)));
+
+        return world;
+    }
+
+    int main() {
+        ...
+        auto world = random_scene();
+
+        vec3 lookfrom(13,2,3);
+        vec3 lookat(0,0,0);
+        vec3 vup(0,1,0);
+        auto dist_to_focus = 10.0;
+        auto aperture = 0.1;
+
+        camera cam(lookfrom, lookat, vup, 20, aspect_ratio, aperture, dist_to_focus);
+        ...
     }
     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     [Listing [scene-final]: <kbd>[main.cc]</kbd> Final scene]
@@ -2347,8 +2794,11 @@ First let’s make the image on the cover of this book -- lots of random spheres
 <div class='together'>
 This gives:
 
+  <div class="render">
+
   ![Final scene](../images/img.book1-final.jpg)
 
+  </div>
 </div>
 
 An interesting thing you might note is the glass balls don’t really have shadows which makes them
@@ -2390,14 +2840,69 @@ Have fun, and please send me your cool images!
 Acknowledgments
 ====================================================================================================
 
-Thanks to readers Apoorva Joshi, Jason Stone, Becker, Matthew Heimlich, Frank He, Benjamin
-Summerton, Marcus Ottosson and Lorenzo Mancini for finding bugs, and to the [limnu.com][] team with
-help on the figures. Thanks to Fabio San for pull requests.
+<div class="credit-list"> **Original Manuscript Help**
+
+  - Dave Hart
+  - Jean Buckley
+</div>
+
+<div class="credit-list"> **Web Release**
+
+  - Berna Kabadayı
+  - Lorenzo Mancini
+  - Lori Whippler Hollasch
+  - Ronald Wotzlaw
+</div>
+
+<div class="credit-list"> **Corrections and Improvements**
+
+  - Aaryaman Vasishta
+  - Andrew Kensler
+  - Apoorva Joshi
+  - Aras Pranckevičius
+  - Becker
+  - Ben Kerl
+  - Benjamin Summerton
+  - Bennett Hardwick
+  - Dan Drummond
+  - David Chambers
+  - David Hart
+  - Eric Haines
+  - Fabio Sancinetti
+  - Filipe Scur
+  - Frank He
+  - Gerrit Wessendorf
+  - Grue Debry
+  - Ingo Wald
+  - Jason Stone
+  - Jean Buckley
+  - Joey Cho
+  - Lorenzo Mancini
+  - Marcus Ottosson
+  - Matthew Heimlich
+  - Nakata Daisuke
+  - Paul Melis
+  - Phil Cristensen
+  - Ronald Wotzlaw
+  - Tatsuya Ogawa
+  - Thiago Ize
+  - Vahan Sosoyan
+</div>
+
+<div class="credit-list"> **Tools**
+
+  <div class="indented">
+  Thanks to the team at [Limnu][] for help on the figures.
+
+  Huge shout out to Morgan McGuire for his fantastic [Markdeep][] library.
+  </div>
+</div>
 
 
 
-[limnu.com]: https://limnu.com/
-
+[acknowledgments]: #acknowledgments
+[Limnu]: https://limnu.com/
+[Markdeep]: https://casual-effects/markdeep/
 
 
 <!-- Markdeep: https://casual-effects.com/markdeep/ -->

@@ -15,71 +15,88 @@ from the web:
   - [Ray Tracing: The Next Week][web2]
   - [Ray Tracing: The Rest of Your Life][web3]
 
-For printed copies, or to create PDF versions, use the print function in your browser. These books
-have been properly formatted for print versions as well.
+These books have been formatted for both screen and print. For printed copies, or to create PDF
+versions, use the print function in your browser.
 
 
-Getting and Building the Source
---------------------
-The [github page][git repo] for this project contains all source and documentation associated
-with the _Ray Tracing in One Weekend_ series of books.
-
-A local copy of the project can be created on your machine through git bash:
-```
-$ git clone https://github.com/RayTracing/raytracing.github.io
-```
-A local copy can also be obtained by pointing a git gui client to the link:
-```
-https://github.com/RayTracing/raytracing.github.io
-``` 
-
-Copies of source are provided for you to check your work and compare against.
-If you wish to build the provided source, the process uses CMake.
+News
+-----
+2020-March-23 — v3.0.0 is out! Following the major v2.0.0 release, we finally had the chance to dig
+into some of the larger changes we'd been wanting to make for a long time. This is a large change
+across the books and entire source code. The new source code now builds using CMake, for most
+platforms and build systems. We've refactored a good deal of the project source, cleaning things up,
+refactoring, adding new functionality where it made sense, and generally trying to simplify the code
+with the goal of making it easier to understand and modify. Finally, this release includes a number
+of changes to areas of the book that have given readers difficulties. Enjoy!
 
 
-If on Linux or OSX, from the terminal:
-```
-$ git clone https://github.com/RayTracing/raytracing.github.io
-$ cd raytracing.github.io
-$ mkdir build
-$ cd build
-$ cmake ..
-$ make
-```
+Branches
+---------
+The `master` branch contains the code at latest release. All ongoing development, with all of the
+latest changes, can be found in the `development` branch. If you have issues to file, you may want
+to check to see if they're still present in the `development` branch.
 
-If on Windows, building is recommended on CMake Gui with Visual Studio:
-```
-1. Open CMake Gui on Windows
-2. Under "Where is the source code:" set to location of the copied directory
-     e.g. C:\Users\Peter\raytracing.github.io
-3. Add Folder "build" within the location of the copied directory
-     e.g. C:\Users\Peter\raytracing.github.io\build
-4. Under "Where to build the binaries" set to newly created build directory
-5. Click "Configure"
-6. Under "Specify the generator for this project" set to your version of Visual Studio
-7. Click "Done"
-8. Click "Configure" again
-9. Click "Generate"
-10. In File Explorer, navigate to build directory and double-click the newly created .sln project
-11. Build in Visual Studio
-```
+
+Downloading The Source Code
+----------------------------
+The [GitHub home][] for this project contains all source and documentation associated with the _Ray
+Tracing in One Weekend_ series of books. To clone or download the source code, see the green "Clone
+or download" button in the upper right of the project home page.
+
+
+Building and Running
+---------------------
+Copies of source are provided for you to check your work and compare against. If you wish to build
+the provided source, the project uses CMake. At the root of the project directory, run the following
+commands to build the debug version of every executable:
+
+    $ cmake -B build
+    $ cmake --build build
+
+You can specify the target with the `--target <program>` option, where the program may be
+`inOneWeekend`, `theNextWeek`, `theRestOfYourLife`, or any of the demonstration programs. By default
+(with no `--target` option), CMake will build all targets.
+
+On Windows, you can build either `debug` (the default) or `release` (the optimized version). To
+specify this, use the `--config <debug|release>` option.
+
+### CMake GUI on Windows
+You may choose to use the CMake GUI when building on windows.
+
+1. Open CMake GUI on Windows
+2. For "Where is the source code:", set to location of the copied directory. For example,
+   `C:\Users\Peter\raytracing.github.io`.
+3. Add the folder "build" within the location of the copied directory. For example,
+   `C:\Users\Peter\raytracing.github.io\build`.
+4. For "Where to build the binaries", set this to the newly-created build directory.
+5. Click "Configure".
+6. For "Specify the generator for this project", set this to your version of Visual Studio.
+7. Click "Done".
+8. Click "Configure" again.
+9. Click "Generate".
+10. In File Explorer, navigate to build directory and double click the newly-created `.sln` project.
+11. Build in Visual Studio.
 
 If the project is succesfully cloned and built, you can then use the native terminal of your
 operating system to simply print the image to file.
 
-If on Linux or OSX, from the terminal:
-```
-$ ./inOneWeekend > weekendOutput.ppm
-```
+### Running The Programs
 
-If on Windows, open the command line, cmd.exe:
-```
-C:\Users\Peter\raytracing.github.io\build\inOneWeekend.exe > weekendOutput.ppm
-```
+On Linux or OSX, from the terminal, run like this:
 
-This PPM file can then be viewed as a regular computer image. Most operating systems come natively
-with a PPM viewer included. If your operating system has difficulty knowing what to do with the
-output, then PPM file viewers can be easily found online.
+    $ build/inOneWeekend > image.ppm
+
+On Windows, run like this:
+
+    build\debug\inOneWeekend > image.ppm
+
+or, run the optimized version (if you've built with `--config release`):
+
+    build\release\inOneWeekend > image.ppm
+
+The generated PPM file can be viewed directly as a regular computer image, if your operating system
+supports this image type. If your system doesn't handle PPM files, then you should be able to find
+PPM file viewers online. We like [ImageMagick][].
 
 
 Corrections & Contributions
@@ -96,9 +113,8 @@ review the [CONTRIBUTING][] document for the most effective way to proceed.
 [cover1]:                   images/RTOneWeekend-small.jpg
 [cover2]:                   images/RTNextWeek-small.jpg
 [cover3]:                   images/RTRestOfYourLife-small.jpg
-[git repo]:                 https://github.com/RayTracing/raytracing.github.io/
-[releases]:                 https://github.com/RayTracing/raytracing.github.io/releases/
-[submit issues via GitHub]: https://github.com/raytracing/raytracing.github.io/issues/
+[GitHub home]:              https://github.com/RayTracing/raytracing.github.io/
+[ImageMagick]:              https://imagemagick.org/
 [web1]:                     https://raytracing.github.io/books/RayTracingInOneWeekend.html
 [web2]:                     https://raytracing.github.io/books/RayTracingTheNextWeek.html
 [web3]:                     https://raytracing.github.io/books/RayTracingTheRestOfYourLife.html

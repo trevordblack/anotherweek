@@ -10,6 +10,10 @@ body {
     font-family: sans-serif;
 }
 
+div.indented {
+    margin-left: 5ex;
+}
+
 
 /* -------------------------------------------------------------------------------------------------
 ** Table of Contents
@@ -150,6 +154,10 @@ body {
     width: 72ex;
 }
 
+.md div.render img {
+    image-rendering: pixelated;
+}
+
 .md div.image {
     margin-bottom: 1em;
 }
@@ -159,6 +167,17 @@ body {
     margin-top: 0;
     margin-bottom: 1em;
 }
+
+/* -------------------------------------------------------------------------------------------------
+** Acknowledgments
+** -----------------------------------------------------------------------------------------------*/
+
+div.credit-list ul {
+    margin-top: 0;
+    list-style-type: none;
+    column-count: 3;
+}
+
 
 
 /* -------------------------------------------------------------------------------------------------

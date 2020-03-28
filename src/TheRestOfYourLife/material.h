@@ -11,9 +11,10 @@
 // along with this software. If not, see <http://creativecommons.org/publicdomain/zero/1.0/>.
 //==============================================================================================
 
-#include "common/rtweekend.h"
-#include "common/texture.h"
+#include "rtweekend.h"
+
 #include "pdf.h"
+#include "texture.h"
 
 
 double schlick(double cosine, double ref_idx) {
@@ -28,7 +29,7 @@ struct scatter_record
     ray specular_ray;
     bool is_specular;
     vec3 attenuation;
-    pdf *pdf_ptr;
+    shared_ptr<pdf> pdf_ptr;
 };
 
 
@@ -62,64 +63,57 @@ class dielectric : public material {
             const ray& r_in, const hit_record& rec, scatter_record& srec
         ) const {
             srec.is_specular = true;
-            srec.pdf_ptr = 0;
+            srec.pdf_ptr = nullptr;
             srec.attenuation = vec3(1.0, 1.0, 1.0);
-            vec3 outward_normal;
-            vec3 reflected = reflect(r_in.direction(), rec.normal);
-            vec3 refracted;
-            double ni_over_nt;
-            double reflect_prob;
-            double cosine;
+            double etai_over_etat = (rec.front_face) ? (1.0 / ref_idx) : (ref_idx);
 
-            if (dot(r_in.direction(), rec.normal) > 0) {
-                outward_normal = -rec.normal;
-                ni_over_nt = ref_idx;
-                cosine = ref_idx * dot(r_in.direction(), rec.normal)
-                       / r_in.direction().length();
-            } else {
-                outward_normal = rec.normal;
-                ni_over_nt = 1.0 / ref_idx;
-                cosine = -dot(r_in.direction(), rec.normal) / r_in.direction().length();
+            vec3 unit_direction = unit_vector(r_in.direction());
+            double cos_theta = ffmin(dot(-unit_direction, rec.normal), 1.0);
+            double sin_theta = sqrt(1.0 - cos_theta*cos_theta);
+            if (etai_over_etat * sin_theta > 1.0 ) {
+                vec3 reflected = reflect(unit_direction, rec.normal);
+                srec.specular_ray = ray(rec.p, reflected, r_in.time());
+                return true;
             }
 
-            if (refract(r_in.direction(), outward_normal, ni_over_nt, refracted)) {
-                reflect_prob = schlick(cosine, ref_idx);
-            } else {
-                reflect_prob = 1.0;
+            double reflect_prob = schlick(cos_theta, etai_over_etat);
+            if (random_double() < reflect_prob)
+            {
+                vec3 reflected = reflect(unit_direction, rec.normal);
+                srec.specular_ray = ray(rec.p, reflected, r_in.time());
+                return true;
             }
 
-            if (random_double() < reflect_prob) {
-               srec.specular_ray = ray(rec.p, reflected, r_in.time());
-            } else {
-               srec.specular_ray = ray(rec.p, refracted, r_in.time());
-            }
-
+            vec3 refracted = refract(unit_direction, rec.normal, etai_over_etat);
+            srec.specular_ray = ray(rec.p, refracted, r_in.time());
             return true;
         }
 
+    public:
         double ref_idx;
 };
 
 
 class diffuse_light : public material {
     public:
-        diffuse_light(texture *a) : emit(a) {}
+        diffuse_light(shared_ptr<texture> a) : emit(a) {}
 
         virtual vec3 emitted(
             const ray& r_in, const hit_record& rec, double u, double v, const vec3& p
         ) const {
-            if (dot(rec.normal, r_in.direction()) >= 0.0)
+            if (!rec.front_face)
                 return vec3(0,0,0);
             return emit->value(u, v, p);
         }
 
-        texture *emit;
+    public:
+        shared_ptr<texture> emit;
 };
 
 
 class isotropic : public material {
     public:
-        isotropic(texture *a) : albedo(a) {}
+        isotropic(shared_ptr<texture> a) : albedo(a) {}
 
         virtual bool scatter(
             const ray& r_in, const hit_record& rec, vec3& attenuation, ray& scattered
@@ -129,18 +123,21 @@ class isotropic : public material {
             return true;
         }
 
-        texture *albedo;
+    public:
+        shared_ptr<texture> albedo;
 };
 
 
 class lambertian : public material {
     public:
-        lambertian(texture *a) : albedo(a) {}
+        lambertian(shared_ptr<texture> a) : albedo(a) {}
 
-        bool scatter(const ray& r_in, const hit_record& rec, scatter_record& srec) const {
+        virtual bool scatter(
+            const ray& r_in, const hit_record& rec, scatter_record& srec
+        ) const {
             srec.is_specular = false;
             srec.attenuation = albedo->value(rec.u, rec.v, rec.p);
-            srec.pdf_ptr = new cosine_pdf(rec.normal);
+            srec.pdf_ptr = make_shared<cosine_pdf>(rec.normal);
             return true;
         }
 
@@ -151,7 +148,8 @@ class lambertian : public material {
             return cosine < 0 ? 0 : cosine/pi;
         }
 
-        texture *albedo;
+    public:
+        shared_ptr<texture> albedo;
 };
 
 
@@ -163,13 +161,15 @@ class metal : public material {
             const ray& r_in, const hit_record& rec, scatter_record& srec
         ) const {
             vec3 reflected = reflect(unit_vector(r_in.direction()), rec.normal);
-            srec.specular_ray = ray(rec.p, reflected + fuzz*random_in_unit_sphere(), r_in.time());
+            srec.specular_ray =
+                ray(rec.p, reflected + fuzz*random_in_unit_sphere(), r_in.time());
             srec.attenuation = albedo;
             srec.is_specular = true;
-            srec.pdf_ptr = 0;
+            srec.pdf_ptr = nullptr;
             return true;
         }
 
+    public:
         vec3 albedo;
         double fuzz;
 };

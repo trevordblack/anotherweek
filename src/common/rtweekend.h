@@ -9,10 +9,16 @@
 // along with this software. If not, see <http://creativecommons.org/publicdomain/zero/1.0/>.
 //==============================================================================================
 
+#include <cmath>
 #include <cstdlib>
 #include <limits>
-#include <cmath>
+#include <memory>
 
+
+// Usings
+
+using std::shared_ptr;
+using std::make_shared;
 
 // Constants
 
@@ -50,8 +56,8 @@ inline int random_int(int min, int max) {
 
 // Common Headers
 
-#include "common/ray.h"
-#include "common/vec3.h"
+#include "ray.h"
+#include "vec3.h"
 
 
 #endif

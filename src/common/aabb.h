@@ -11,7 +11,7 @@
 // along with this software. If not, see <http://creativecommons.org/publicdomain/zero/1.0/>.
 //==============================================================================================
 
-#include "common/rtweekend.h"
+#include "rtweekend.h"
 
 
 class aabb {
@@ -55,6 +55,7 @@ class aabb {
                 return 2;
         }
 
+    public:
         vec3 _min;
         vec3 _max;
 };
