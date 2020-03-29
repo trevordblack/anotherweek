@@ -59,38 +59,53 @@ class srt {
             double rx, double ry, double rz,
             double tx, double ty, double tz)
         {
-            mat4x4 scale = scale_matrix(1/sx, 1/sy, 1/sz);
-            mat4x4 rot_x = rotation_x_matrix(-rx); 
-            mat4x4 rot_y = rotation_y_matrix(-ry); 
-            mat4x4 rot_z = rotation_z_matrix(-rz); 
-            mat4x4 trans = translation_matrix(-tx, -ty, -tz);
+            mat4x4 o2w_scale = scale_matrix(sx, sy, sz);
+            mat4x4 w2o_scale = scale_matrix(1/sx, 1/sy, 1/sz);
 
-            m = scale * rot_x * rot_y * rot_z * trans;
+            mat4x4 o2w_rot_x = rotation_x_matrix(rx); 
+            mat4x4 o2w_rot_y = rotation_y_matrix(ry); 
+            mat4x4 o2w_rot_z = rotation_z_matrix(rz); 
+            mat4x4 w2o_rot_x = rotation_x_matrix(-rx); 
+            mat4x4 w2o_rot_y = rotation_y_matrix(-ry); 
+            mat4x4 w2o_rot_z = rotation_z_matrix(-rz); 
+
+            mat4x4 o2w_trans = translation_matrix(tx, ty, tz);
+            mat4x4 w2o_trans = translation_matrix(-tx, -ty, -tz);
+
+            o2w = o2w_scale * o2w_rot_x * o2w_rot_y * o2w_rot_z * o2w_trans;
+            w2o = w2o_scale * w2o_rot_x * w2o_rot_y * w2o_rot_z * w2o_trans;
         }
 
-        vec3 transform_vec(const vec3 &v);
-        ray  transform_ray(const ray  &r);
-        vec3  transform_point(const vec3 &p);
+        vec3 vec_object_to_world(const vec3 &v);
 
-        mat4x4 m;
+        vec3 vec_world_to_object(const vec3 &v);
+        vec3 point_world_to_object(const vec3 &p);
+        ray  ray_world_to_object(const ray  &r);
+
+        mat4x4 o2w;
+        mat4x4 w2o;
 };
 
-vec3 srt::transform_vec(const vec3 &v) {
-    return m*v;    
+vec3 srt::vec_object_to_world(const vec3 &v) {
+    return o2w * v;    
 }
 
-vec3 srt::transform_point(const vec3 &p) {
-    vec4 new_p = m*vec4(p.e[0], p.e[1], p.e[2], 1.0);
+vec3 srt::vec_world_to_object(const vec3 &v) {
+    return w2o * v;    
+}
+
+vec3 srt::point_world_to_object(const vec3 &p) {
+    vec4 new_p = w2o * vec4(p.e[0], p.e[1], p.e[2], 1.0);
     return vec3(new_p.e[0] / new_p.e[3],
                 new_p.e[1] / new_p.e[3],
                 new_p.e[2] / new_p.e[3]);
 }
 
-ray srt::transform_ray(const ray &r) {
+ray srt::ray_world_to_object(const ray &r) {
     ray new_ray;
     new_ray.tm = r.tm;
-    new_ray.orig = transform_point(r.orig);
-    new_ray.dir = transform_vec(r.dir);
+    new_ray.orig = point_world_to_object(r.orig);
+    new_ray.dir = vec_world_to_object(r.dir);
     return new_ray;
 }
 

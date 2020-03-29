@@ -76,7 +76,7 @@ set ( SOURCE_ANOTHER_WEEK
   src/common/perlin.h
   src/common/rtw_stb_image.h
   src/common/texture.h
-  src/AnotherWeek/aarect.h
+  src/AnotherWeek/quad.h
   src/AnotherWeek/box.h
   src/AnotherWeek/bvh.h
   src/AnotherWeek/constant_medium.h
@@ -100,4 +100,14 @@ add_executable(pi                src/TheRestOfYourLife/pi.cc                ${CO
 add_executable(sphere_importance src/TheRestOfYourLife/sphere_importance.cc ${COMMON_ALL})
 add_executable(sphere_plot       src/TheRestOfYourLife/sphere_plot.cc       ${COMMON_ALL})
 
+target_include_directories(inOneWeekend      PRIVATE src)
+target_include_directories(theNextWeek       PRIVATE src)
+target_include_directories(theRestOfYourLife PRIVATE src)
+target_include_directories(anotherWeek       PRIVATE src)
+target_include_directories(cos_cubed         PRIVATE src)
+target_include_directories(cos_density       PRIVATE src)
+target_include_directories(integrate_x_sq    PRIVATE src)
+target_include_directories(pi                PRIVATE src)
+target_include_directories(sphere_importance PRIVATE src)
+target_include_directories(sphere_plot       PRIVATE src)
 include_directories(src/common)
