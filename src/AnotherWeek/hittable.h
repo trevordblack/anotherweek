@@ -15,7 +15,6 @@
 
 #include "aabb.h"
 
-
 class material;
 
 void get_sphere_uv(const vec3& p, double& u, double& v) {
@@ -24,7 +23,6 @@ void get_sphere_uv(const vec3& p, double& u, double& v) {
     u = 1-(phi + pi) / (2*pi);
     v = (theta + pi/2) / pi;
 }
-
 
 struct hit_record {
     vec3 p;
