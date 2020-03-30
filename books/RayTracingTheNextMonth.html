@@ -1,0 +1,77 @@
+<meta charset="utf-8">
+<!-- Markdeep: https://casual-effects.com/markdeep/ -->
+
+
+
+                                   **Ray Tracing: The Next Month**
+                                          Trevor David Black
+                                                <br>
+                                     Version 0.1.0-wip, 2020-XXX-XX
+                                                <br>
+                        Copyright 2020 Trevor David Black. All rights reserved.
+
+
+
+Overview
+====================================================================================================
+
+Okay, so you've written a ray tracer.
+
+In _In One Weekend_ you learned about the ray tracing paradigm and managed to render a collection of
+spheres with varying material properties. You moved on to _The Next Month_ and vastly increased your
+ray tracing knowledge; combining lights, quads, spheres, and volumes to produce vastly more
+complicated scenes. With as much of an increase in visual fidelity that came from book one to book
+two, the hope of this book is:
+
+To set the reader on the path of writing commercially viable path tracing software.
+
+Something needs to be made explicit: This book, _The Next Month_, is chronilogically the fourth book
+in the _Ray Tracing_ series, being written after _In One Weekend_, _The Next Week_, and
+_The Rest of Your Life_. However, it is the intention of the author that this book will be placed
+logically as the third book in the series, falling between _The Next Week_ and
+_The Rest of Your Life_. You are expected to have completed _In One Weekend_ and _The Next Week_.
+
+This book is written in the hope that the reader will go through the chapters in order. If you find
+that a specific chapter isn't particularly helpful to your interests, then you may be able to skip
+it. This book is structured in blocks of chapters, where any given block will have very little
+reliance on content found in a different block. You can comfortably skip over any block of chapters
+without too much difficulty. The chapters would be split up this way:
+
+Block I (Prologue)
+- Multithreading
+Block II
+- SRT Affine Transformations
+- Triangles
+- Meshes
+- Obj Loading
+- Cleanup
+Block III
+- BRDF
+- Diffuse Materials
+- Glossy Materials
+- BSSRDF
+Block IV (Intermission)
+- Light Paths and AOVs
+Block V
+- Make a Video
+- Keyframes
+- Shadow Rays
+Block VI (Epilogue)
+- Environment Map
+
+There is a lot of ground to cover in this book, most of which still needs writing, but without any further ado...
+
+Happy tracing.
+
+Of course, any bugs/complaints/feedback are very much welcome.
+
+
+Multithreading
+===================================================================================================
+
+<!-- Markdeep: https://casual-effects.com/markdeep/ -->
+<link rel='stylesheet' href='../style/book.css'>
+<style class="fallback">body{visibility:hidden;white-space:pre;font-family:monospace}</style>
+<script src="markdeep.min.js"></script>
+<script src="https://casual-effects.com/markdeep/latest/markdeep.min.js"></script>
+<script>window.alreadyProcessedMarkdeep||(document.body.style.visibility="visible")</script>
