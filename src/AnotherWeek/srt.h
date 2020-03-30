@@ -72,7 +72,7 @@ class srt {
             mat4x4 o2w_trans = translation_matrix(tx, ty, tz);
             mat4x4 w2o_trans = translation_matrix(-tx, -ty, -tz);
 
-            o2w = o2w_scale * o2w_rot_x * o2w_rot_y * o2w_rot_z * o2w_trans;
+            o2w = o2w_trans * o2w_rot_z * o2w_rot_y * o2w_rot_x * o2w_scale;
             w2o = w2o_scale * w2o_rot_x * w2o_rot_y * w2o_rot_z * w2o_trans;
         }
 

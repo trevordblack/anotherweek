@@ -1,27 +1,27 @@
 Chapter 1: Multi-threading
-  - N images averaged
-  - N threads where N = x*y
-  - y/N lines over N threads
+  - [ ] N images averaged
+  - [ ] N threads where N = x*y
+  - [ ] y/N lines over N threads
 
 Chapter 2: SRT Affine Transforms
-  - Add SRT matrix class
-  - Rewrite rect
-  - Rewrite box
-  - Rewrite sphere (get ellipses for free)
-  - Rewrite moving_sphere
-  - Rewrite constant_medium
-  - Enable transform on hittable_list?
+  - [x] Add SRT matrix class
+  - [x] Rewrite rect as quad
+  - [ ] Rewrite sphere (get ellipses for free)
+  - [ ] Rewrite moving_sphere
+  - [ ] Rewrite constant_medium
+  - [ ] Enable transform on hittable_list?
 
 Chapter 3: Triangles
 
 Chapter 4: Meshes
-  - Triangle meshes
-  - quads meshes
+  - [ ] Triangle meshes
+  - [ ] quads meshes
+  - [ ] Rewrite box
 
 Chapter 5: Obj Loading
-  - tinyobjloader.h
-  - Stanford Dragon
-  - Sponza
+  - [ ] tinyobjloader.h
+  - [ ] Stanford Dragon
+  - [ ] Sponza
  
 Chapter -: BRDF
 

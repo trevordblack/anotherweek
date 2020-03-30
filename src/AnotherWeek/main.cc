@@ -69,7 +69,7 @@ hittable_list mirror_and_sphere() {
 
     objects.add(make_shared<quad>(
         mirror,
-        make_shared<srt>(2.0, 2.0, 1.0,
+        make_shared<srt>(2.0, 1.0, 2.0,
                          90.0, 0.0, 0.0,
                          0.0, 0.0, 0.0)));
     objects.add(make_shared<sphere>(
@@ -80,14 +80,117 @@ hittable_list mirror_and_sphere() {
     return objects;
 }
 
+
+hittable_list random_scene() {
+    hittable_list world;
+
+    auto checker = make_shared<lambertian>(
+        make_shared<checker_texture>(
+            make_shared<constant_texture>(vec3(0.2, 0.3, 0.1)),
+            make_shared<constant_texture>(vec3(0.9, 0.9, 0.9))));
+
+    world.add(make_shared<quad>(
+        checker,
+        make_shared<srt>(100.0, 100.0, 1.0,
+                         90.0, 0.0, 0.0,
+                         0.0, -0.01, 0.0)));
+
+    for (int a = -10; a < 10; a++) {
+        for (int b = -10; b < 10; b++) {
+            auto choose_mat = random_double();
+            vec3 center(a + 0.9*random_double(), 0.2, b + 0.9*random_double());
+            if ((center - vec3(4, .2, 0)).length() > 0.9) {
+                if (choose_mat < 0.8) {
+                    // diffuse
+                    auto albedo = vec3::random() * vec3::random();
+                    world.add(make_shared<moving_sphere>(
+                        center, center + vec3(0, random_double(0,.5), 0), 0.0, 1.0, 0.2,
+                        make_shared<lambertian>(make_shared<constant_texture>(albedo))
+                    ));
+                } else if (choose_mat < 0.95) {
+                    // metal
+                    auto albedo = vec3::random(.5, 1);
+                    auto fuzz = random_double(0, .5);
+                    world.add(
+                        make_shared<sphere>(center, 0.2, make_shared<metal>(albedo, fuzz)));
+                } else {
+                    // glass
+                    world.add(make_shared<sphere>(center, 0.2, make_shared<dielectric>(1.5)));
+                }
+            }
+        }
+    }
+
+    world.add(make_shared<sphere>(vec3(0, 1, 0), 1.0, make_shared<dielectric>(1.5)));
+    world.add(make_shared<sphere>(
+        vec3(-4, 1, 0), 1.0,
+        make_shared<lambertian>(make_shared<constant_texture>(vec3(0.4, 0.2, 0.1)))
+    ));
+    world.add(
+        make_shared<sphere>(vec3(4, 1, 0), 1.0, make_shared<metal>(vec3(0.7, 0.6, 0.5), 0.0)));
+
+    return hittable_list(make_shared<bvh_node>(world, 0.0, 1.0));
+}
+
+hittable_list random_elipsoid() {
+    hittable_list world;
+
+    auto checker = make_shared<lambertian>(
+        make_shared<checker_texture>(
+            make_shared<constant_texture>(vec3(0.2, 0.3, 0.1)),
+            make_shared<constant_texture>(vec3(0.9, 0.9, 0.9))));
+
+    world.add(make_shared<quad>(
+        checker,
+        make_shared<srt>(100.0, 100.0, 1.0,
+                         90.0, 0.0, 0.0,
+                         0.0, -0.01, 0.0)));
+
+    for (int a = -10; a < 10; a++) {
+        for (int b = -10; b < 10; b++) {
+            auto choose_mat = random_double();
+            vec3 center(a + 0.9*random_double(), 0.2, b + 0.9*random_double());
+            if ((center - vec3(4, .2, 0)).length() > 0.9) {
+                if (choose_mat < 0.8) {
+                    // diffuse
+                    auto albedo = vec3::random() * vec3::random();
+                    world.add(make_shared<moving_sphere>(
+                        center, center + vec3(0, random_double(0,.5), 0), 0.0, 1.0, 0.2,
+                        make_shared<lambertian>(make_shared<constant_texture>(albedo))
+                    ));
+                } else if (choose_mat < 0.95) {
+                    // metal
+                    auto albedo = vec3::random(.5, 1);
+                    auto fuzz = random_double(0, .5);
+                    world.add(
+                        make_shared<sphere>(center, 0.2, make_shared<metal>(albedo, fuzz)));
+                } else {
+                    // glass
+                    world.add(make_shared<sphere>(center, 0.2, make_shared<dielectric>(1.5)));
+                }
+            }
+        }
+    }
+
+    world.add(make_shared<sphere>(vec3(0, 1, 0), 1.0, make_shared<dielectric>(1.5)));
+    world.add(make_shared<sphere>(
+        vec3(-4, 1, 0), 1.0,
+        make_shared<lambertian>(make_shared<constant_texture>(vec3(0.4, 0.2, 0.1)))
+    ));
+    world.add(
+        make_shared<sphere>(vec3(4, 1, 0), 1.0, make_shared<metal>(vec3(0.7, 0.6, 0.5), 0.0)));
+
+    return hittable_list(make_shared<bvh_node>(world, 0.0, 1.0));
+}
+
 int main() {
-    const int image_width = 600;
+    const int image_width = 1200;
     const int image_height = 600;
     const auto aspect_ratio = double(image_width) / image_height;
 
     hittable_list world;
 
-    int samples_per_pixel = 100;
+    int samples_per_pixel = 40;
     int max_depth = 50;
 
     vec3 lookfrom;
@@ -98,7 +201,7 @@ int main() {
     auto dist_to_focus = 10.0;
     vec3 background(0,0,0);
 
-    switch (1) {
+    switch (2) {
         case 0:
             world = red_quad();
             lookfrom = vec3(0, 2, 2);
@@ -112,6 +215,14 @@ int main() {
             lookfrom = vec3(0, 2, 4);
             lookat = vec3(0, 0, 0);
             vfov = 40.0;
+            background = vec3(0.70, 0.80, 1.00);
+            break;
+
+        case 2:
+            world = random_scene();
+            lookfrom = vec3(13,2,3);
+            lookat = vec3(0,0,0);
+            vfov = 20.0;
             background = vec3(0.70, 0.80, 1.00);
             break;
     }
