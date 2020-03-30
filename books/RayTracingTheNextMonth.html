@@ -129,6 +129,69 @@ singlethreaded rendering. But only if we are able to take advantage of all 12 lo
 Averaging N Photos
 ----------------------------------------------------------------------------------------------------
 
+We can start with an instructive, if limiting, exercise.
+
+If we focus our attention to the rendering loop we'll notice a few things:
+
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C++
+    for (int j = image_height-1; j >= 0; --j) {
+        std::cerr << "\rScanlines remaining: " << j << ' ' << std::flush;
+        for (int i = 0; i < image_width; ++i) {
+            vec3 color;
+            for (int s = 0; s < samples_per_pixel; ++s) {
+                auto u = (i + random_double()) / image_width;
+                auto v = (j + random_double()) / image_height;
+                ray r = cam.get_ray(u, v);
+                color += ray_color(r, background, world, max_depth);
+            }
+            color.write_color(std::cout, samples_per_pixel);
+        }
+    }
+ 
+    std::cerr << "\nDone.\n";
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    [Listing [render-loop]: <kbd>[main.cc]</kbd> The rendering loop the program runs over]
+
+This is all of the work of our program, there are a few things to set up like camera configuration
+and scene build up, but 99.9% of our runtime exists within this code block. A few things of value:
+
+1. It's a triply-nest loop, meaning it has 3 layers of for loops
+2. We would expect that `ray_color` is where the majority of our runtime comes from
+3. The number of `ray_color` invocations appears to scale with
+`image_height`*`image_width`*`samples_per_pixel`
+
+If you've played around with image dimension or pixel sampling, you'll have noticed that the program
+time of your render will have scaled linearly with the number of pixels or their sample count. If we
+can figure out how to split up these `ray_color` invocations into different programs or different
+logical threads, then we would expect a linear speedup. This is multithreading.
+
+The simplest way we can accomplish this is by splitting up our render. We can take our render and
+split it in half: We render our scene twice, but half the sample count in each program, and then
+take the average of both. This should produce an image with the image dimensions and samples per
+pixel of the original image, but will have run in two different logical threads, whereby taking
+better advantage of our underlying hardware.
+
+<!-- #Immediately "Show 32spp images"--> 
+
+<!-- "Show first 16spp images"--> 
+
+<!-- "Show second 16spp images"--> 
+
+<!-- "Show combined 16+16spp images"--> 
+
+<!-- "Explain why 16+16 doesn't look like 32"--> 
+
+<!-- "Change random seed to wallclock"--> 
+
+<!-- "Show off new averaging"--> 
+
+<!-- "Explain why it fails for random parts of our scene"--> 
+
+<!-- "Say that we can map random parts of the scene to a constant seed"--> 
+<!-- "But don't do that, do this instead, leading to next chapter"--> 
+
+
+
 
 
 <!-- Markdeep: https://casual-effects.com/markdeep/ -->
