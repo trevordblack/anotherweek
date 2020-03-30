@@ -59,7 +59,8 @@ Block V
 Block VI (Epilogue)
 - Environment Map
 
-There is a lot of ground to cover in this book, most of which still needs writing, but without any further ado...
+There is a lot of ground to cover in this book, most of which still needs writing, but without any
+further ado...
 
 Happy tracing.
 
@@ -67,7 +68,68 @@ Of course, any bugs/complaints/feedback are very much welcome.
 
 
 Multithreading
-===================================================================================================
+====================================================================================================
+
+By now, you've run into the following experience:
+
+You start up a render of a complicated scene at high sample count or high pixel dimension, or
+_both_. Your computer's fan spins up to a loud degree and then you run off and get a coffee.
+
+By the end of _The Next Week_ you were creating images where if you wanted them to have low sampling
+noise you were needing to run them for 5, 10, maybe even 20 minutes. _Well_ the bad news is that
+your renders are still going to take a long time. _But_, the good news is that we'll be rendering
+much more complicated scenes. It's not my intention to spend too much of this time talking about
+runtime performance and teaching you performance optimizations to make your renderers faster. When
+you decided you wanted to ray trace you were sacrificing rendering time for visual fidelity, it just
+means that you'll have a _lot_ of coffees to go grab. And, more to the point, the number and
+sophistication of useful ray tracing optimizations really deserve their own book (or several).
+
+In _The Next Week_ you learned about an extremely effective optimization in the bounding volume
+hierarchy, or BVH, as it's commonly abbreviated. In the scenes that can take advantage of BVH
+acceleration, the optimization changes your scene traversal from being _linear_ with scene
+complexity, to being _logarithmic_ with scene complexity. This is a massive speed-up, for a scene
+with 1,000,000 objects, the linear algorithm will take order 1,000,000 checks, whereas the
+logarithmic algorithm will take order 1,000 checks.
+
+However, you really won't see perfectly logarithmic complexity with any useful scene in practice,
+and you probably found a couple of renders where the addition of the BVH actually **increased**
+runtime. This leads us naturally to multithreading. Up to now, you've only taken advantage of a
+single operating system thread, but if you've been running your renders on a computer built in the
+last 15 years, you haven't been taking advantage of your computers full hardware. Any modern machine
+is going to have a collection of distinct hardware cores that can each run an independent program.
+These distinct hardware blocks frequently operate independently and run different programs: core 1
+might be running your browser, core 2 might be running your text editor, core 3 might be running
+your music player. But this only partly the truth, these hardware cores are frequently running the
+same program, cores 1 through N of your machine are all probably managing your browser. For any
+given program in c++ we can spin up new software threads that get mapped to a hardware core. These
+hardware cores operate (largely) independently and can be made to do more work. We can spin up $N$
+threads, where $N = number of hardware threads$ to speed up our render by something close to $N$.
+
+You may note that this isn't a speedup from linear to logarithmic, but rather a speedup from linear
+to linear. That may not seem as powerful, but the results can still be incredible. The author's
+laptop has 6 hardware cores with 12 logical cores (more on that in a second). For a render that
+takes 15 minutes while running in a single thread, the hope is that the render would take $15/6$ or
+$2.5$ minutes in 6 threads.
+
+As stated, I don't want to spend too long in this book talking about runtime performance, but some
+of the additions required to get multithreading working are required for some of the more
+interesting developments later on in the book. And, it's a pretty big performance win for not a lot
+of code.
+
+As for 6 hardware cores-12 logical cores statement earlier, many desktop CPUs can run multiple
+software threads within one hardware thread. Intel refers to this as Hyperthreading, and AMD refers
+to this as Simultaneous Multithreading (or SMT). The newer your computer, the more likely it can do
+this. The underlying math part of a hardware core is shared between these 2 (frequently 2,
+sometimes more) software threads, and it switches whenever the CPU needs to read something from
+memory (10,000ft summary). It isn't accurate to say that a hardware core running 2 software threads
+is going to see a 2x increase in the number of work it can do. But it's reasonable to expect a 1.3x
+increase, so it's reasonable to expect something around $6 * 1.3 = 7.8$ increase over
+singlethreaded rendering. But only if we are able to take advantage of all 12 logical cores.
+
+Averaging N Photos
+----------------------------------------------------------------------------------------------------
+
+
 
 <!-- Markdeep: https://casual-effects.com/markdeep/ -->
 <link rel='stylesheet' href='../style/book.css'>
