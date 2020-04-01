@@ -23,6 +23,7 @@
 #include "texture.h"
 
 #include <iostream>
+#include <ctime>
 
 
 vec3 ray_color(const ray& r, const vec3& background, const hittable& world, int depth) {
@@ -348,13 +349,14 @@ hittable_list final_scene() {
 
 
 int main() {
-    const int image_width = 600;
-    const int image_height = 600;
+    srand(time(NULL));
+    const int image_width = 768;
+    const int image_height = 768;
     const auto aspect_ratio = double(image_width) / image_height;
 
     hittable_list world;
 
-    int samples_per_pixel = 100;
+    int samples_per_pixel = 16;
     int max_depth = 50;
 
     vec3 lookfrom;
@@ -365,7 +367,7 @@ int main() {
     auto dist_to_focus = 10.0;
     vec3 background(0,0,0);
 
-    switch (0) {
+    switch (10) {
         case 1:
             world = random_scene();
             lookfrom = vec3(13,2,3);

@@ -129,7 +129,8 @@ singlethreaded rendering. But only if we are able to take advantage of all 12 lo
 Averaging N Photos
 ----------------------------------------------------------------------------------------------------
 
-We can start with an instructive, if limiting, exercise.
+We can start with an instructive, if limiting, exercise. Don't worry about implementing any of the
+changes seen in this section, they're meant for instruction, not implementation.
 
 If we focus our attention to the rendering loop we'll notice a few things:
 
@@ -171,23 +172,169 @@ take the average of both. This should produce an image with the image dimensions
 pixel of the original image, but will have run in two different logical threads, whereby taking
 better advantage of our underlying hardware.
 
-<!-- #Immediately "Show 32spp images"--> 
+We'll start this example at the end of _The Next Week_. Taking the final scene of that book, we'll
+render at 32 samples per pixel as our baseline:
 
-<!-- "Show first 16spp images"--> 
+  <div class="render">
 
-<!-- "Show second 16spp images"--> 
+  ![The Next Week final scene in 32 spp](../images/img.book2-final_32spp.png)
 
-<!-- "Show combined 16+16spp images"--> 
+  </div>
 
-<!-- "Explain why 16+16 doesn't look like 32"--> 
+With that render completed, we will take advantage of our operating system's threads by spinning up
+two instances of the render. We'll start up one render at 16 samples per pixel, and then start up
+another render at 16 samples per pixel. If our operating system has threads available, it should
+run both of our renders seperately, and we should see both take about half as long as the 32 samples
+per pixel run from earlier.
 
-<!-- "Change random seed to wallclock"--> 
+The first 16spp render: 
+  <div class="render">
+
+  ![The Next Week final scene in 16 spp (first render)](../images/img.book2-final_16spp.png)
+
+  </div>
+
+And here is the second 16spp render:
+  <div class="render">
+
+  ![The Next Week final scene in 16 spp (second render)](../images/img.book2-final_16spp.png)
+
+  </div>
+
+Both of our outputted images were created in the ppm file format. We need to take the average of
+these two photos to approximate the 32 sample per pixel image. We can either write a ppm loader
+or take advantage of existing tools. Any photo editing software like Photoshop, GIMP, Krita, etc.
+will be able to combine two photos. You can write a ppm loader if you're interested, but I will
+just be combining these in a photo editor. If you're unsure of how to do this, don't worry, you
+won't need to explicitly combine the images to follow along.
+
+When we use a photo editor to combine our two 16spp images we get:
+  <div class="render">
+
+  ![The Next Week final scene in 16 spp (second render)](../images/img.book2-final_16spp.png)
+
+  </div>
+
+Which, does not look like 32 samples per pixel, it doesn't even look better than 16 samples per
+pixel. What is going on here?
+
+Well, all three images: the first 16spp render, the second 16spp render, and the combined 32spp
+render are all perfectly identical. They are pixel perfect copies of one another. The two 16spp
+renders are themselves identical, and the average of the two gives us more of the same.
+
+This leads us to wonder why the original 16 samples per pixel are identical. When we wrote the
+rendering loop, we made sure to randomize the location of rays to remove aliasing:
+
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C++
+    for (int j = image_height-1; j >= 0; --j) {
+        std::cerr << "\rScanlines remaining: " << j << ' ' << std::flush;
+        for (int i = 0; i < image_width; ++i) {
+            vec3 color;
+            for (int s = 0; s < samples_per_pixel; ++s) {
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C++ highlight
+                auto u = (i + random_double()) / image_width;
+                auto v = (j + random_double()) / image_height;
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C++
+                ray r = cam.get_ray(u, v);
+                color += ray_color(r, background, world, max_depth);
+            }
+            color.write_color(std::cout, samples_per_pixel);
+        }
+    }
+ 
+    std::cerr << "\nDone.\n";
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    [Listing [render-loop-randomness]: <kbd>[main.cc]</kbd> Sources of random in the rendering loop]
+
+The `u` and `v` coordinates of the ray within the image should be different between different
+renders. If the `u` and `v` values for one ray are the same as for another ray, we might be
+sampling the same part of the scene and we wouldn't be getting any new information. Let's dig into
+our `random_double` function:
+
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C++
+    inline double random_double() {
+        return rand() / (RAND_MAX + 1.0);
+    }
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    [Listing [random_double]: <kbd>[rtweekend.h]</kbd> The random_double function]
+
+Okay, `random_double` calls into `rand`. `rand` is a c++ function found in `<cstlib>` that returns
+pseudo-random number betwen `0` and `RAND_MAX` using a seed. A couple of important facts in that
+sentence. The first thing is that `rand` is not a truly random number generator, calls to `rand` are
+not truly random, rather, calls to `rand` follow a deterministic pattern. This is the reason that
+different calls to the program produce identical results, any sources of random will be the same for
+both runs. So, even though we were hoping to get different data about our scene, we receive the same
+data. So much for random. It's not all problematic, though. What we can do is change what the
+pattern is.
+
+For any given seed entered into a pseudo-random number generator, that generator will always produce
+the same string of "random" numbers. If we change the seed for that random generator it will produce
+a different string of "random" numbers. For the function `rand` there exists the function `srand`
+that will change the seed that `rand` calls into. All we need to do is call `srand` on `main`:
+
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C++
+    #include <iostream>
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C++ highlight
+    #include <ctime>
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C++
+    ...
+    int main() {
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C++ highlight
+        srand(time(NULL));
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C++
+        const int image_width = 768;
+        const int image_height = 768;
+        const auto aspect_ratio = double(image_width) / image_height;
+
+        hittable_list world;
+
+        int samples_per_pixel = 16;
+        int max_depth = 50;
+
+        vec3 lookfrom;
+        vec3 lookat;
+        vec3 vup(0,1,0);
+        auto vfov = 40.0;
+        auto aperture = 0.0;
+        auto dist_to_focus = 10.0;
+        vec3 background(0,0,0);
+
+        ...
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    [Listing [changing-rand-seed]: <kbd>[main.cc]</kbd> Changing the seed for rand on program start]
+
+The argument to `srand` just tells `srand` to set the seed to the current time. Now when we call
+`rand` we'll get different random numbers, and we should receive different images from our renders.
+Indeed, we do:
+
+  <div class="render">
+
+  ![The Next Week final scene in 16 spp (first seed)](../images/img.book2-final_new-seed-1_16spp.png)
+
+  </div>
+
+  <div class="render">
+
+  ![The Next Week final scene in 16 spp (second seed)](../images/img.book2-final_new-seed-2_16spp.png)
+
+  </div>
+
+
+<!-- Fix perlin bug in final scene --> 
+
+<!-- Consider rerendering final scene in 32,64 spp --> 
 
 <!-- "Show off new averaging"--> 
 
 <!-- "Explain why it fails for random parts of our scene"--> 
 
-<!-- "Say that we can map random parts of the scene to a constant seed"--> 
+<!-- "Say that we can map random parts of the scene to a constant seed"-->
+
+
+
+The lesson here is that if you have multiple runs of a render you need to be cognizant of where your
+random numbers are coming from, and where they are going.
+
 <!-- "But don't do that, do this instead, leading to next chapter"--> 
 
 
