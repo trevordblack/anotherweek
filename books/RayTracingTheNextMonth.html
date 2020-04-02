@@ -72,8 +72,8 @@ Multithreading
 
 By now, you've run into the following experience:
 
-You start up a render of a complicated scene at high sample count or high pixel dimension, or
-_both_. Your computer's fan spins up to a loud degree and then you run off and get a coffee.
+You start up a render of a complicated scene at high sample count or high pixel dimension, 
+_or both_, and your computer's fan spins up to a loud degree while you run off and get a coffee.
 
 By the end of _The Next Week_ you were creating images where if you wanted them to have low sampling
 noise you were needing to run them for 5, 10, maybe even 20 minutes. _Well_ the bad news is that
@@ -95,15 +95,16 @@ However, you really won't see perfectly logarithmic complexity with any useful s
 and you probably found a couple of renders where the addition of the BVH actually **increased**
 runtime. This leads us naturally to multithreading. Up to now, you've only taken advantage of a
 single operating system thread, but if you've been running your renders on a computer built in the
-last 15 years, you haven't been taking advantage of your computers full hardware. Any modern machine
-is going to have a collection of distinct hardware cores that can each run an independent program.
-These distinct hardware blocks frequently operate independently and run different programs: core 1
-might be running your browser, core 2 might be running your text editor, core 3 might be running
-your music player. But this only partly the truth, these hardware cores are frequently running the
-same program, cores 1 through N of your machine are all probably managing your browser. For any
-given program in c++ we can spin up new software threads that get mapped to a hardware core. These
-hardware cores operate (largely) independently and can be made to do more work. We can spin up $N$
-threads, where $N = number of hardware threads$ to speed up our render by something close to $N$.
+last 15 years, you haven't been taking advantage of your computer's full hardware. Any modern
+machine is going to have a collection of distinct hardware cores that can each run an independent
+program. These distinct hardware blocks frequently operate independently and run different
+programs: core 1 might be running your browser, core 2 might be running your text editor, core 3
+might be running your music player. But this only partly the truth, as these hardware cores are
+frequently running the same program, cores 1 through N of your machine are probably all running
+your browser. For any given program in C++ we can spin up new software threads that get mapped to a
+hardware core. These hardware cores operate (largely) independently and can be made to do more
+work. We can spin up $N$ threads, where $N = number of hardware cores$ to speed up our render by
+something close to $N$.
 
 You may note that this isn't a speedup from linear to logarithmic, but rather a speedup from linear
 to linear. That may not seem as powerful, but the results can still be incredible. The author's
@@ -116,8 +117,8 @@ of the additions required to get multithreading working are required for some of
 interesting developments later on in the book. And, it's a pretty big performance win for not a lot
 of code.
 
-As for 6 hardware cores-12 logical cores statement earlier, many desktop CPUs can run multiple
-software threads within one hardware thread. Intel refers to this as Hyperthreading, and AMD refers
+As for 6 hardware cores with 12 logical cores statement earlier, many desktop CPUs can run multiple
+software threads within one hardware core. Intel refers to this as Hyperthreading, and AMD refers
 to this as Simultaneous Multithreading (or SMT). The newer your computer, the more likely it can do
 this. The underlying math part of a hardware core is shared between these 2 (frequently 2,
 sometimes more) software threads, and it switches whenever the CPU needs to read something from
