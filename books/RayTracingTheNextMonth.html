@@ -126,6 +126,9 @@ is going to see a 2x increase in the number of work it can do. But it's reasonab
 increase, so it's reasonable to expect something around $6 * 1.3 = 7.8$ increase over
 singlethreaded rendering. But only if we are able to take advantage of all 12 logical cores.
 
+If you have a comfortable and working familiarity with multithreading you can safely skip to the
+last section of this chapter. The work leading up to then is mostly theory.
+
 Averaging N Photos
 ----------------------------------------------------------------------------------------------------
 
@@ -322,7 +325,7 @@ Indeed, we do:
 
 <!-- Fix perlin bug in final scene --> 
 
-<!-- Consider rerendering final scene in 32,64 spp --> 
+<!-- rerender final scene again with correct earthmap --> 
 
 <!-- "Show off new averaging"--> 
 
@@ -330,13 +333,315 @@ Indeed, we do:
 
 <!-- "Say that we can map random parts of the scene to a constant seed"-->
 
-
-
 The lesson here is that if you have multiple runs of a render you need to be cognizant of where your
-random numbers are coming from, and where they are going.
+random numbers are coming from, and where they are going. Something that hasn't been mentioned until
+now needs to be brought up. It's perhaps a bit strange that `rand` starts with the seed every time
+until the programmer explicitly changes it. For a function that is producing random numbers, a naive
+assumption would be that `rand` should be producing _different_ random numbers each time, and so
+**should** be starting with a different seed every time.
 
-<!-- "But don't do that, do this instead, leading to next chapter"--> 
+However, this isn't the case in practice, and `rand` always starts with a specific seed. Indeed,
+this is the default, as it is desirable for a random number generator to have a specific seed.
+Between different runs of our renderer, as we increase samples per pixel or make edits to our code,
+we want code that is functionally the same to produce an identical image. If accidentally introduce
+a bug to our code, we want our output to change, indeed we only want our output to change when our
+code has become functionally different. If our random number generator (`rand`) produced different
+images between one run and the next, we would have a much more difficult time knowing if the changes
+are due to `rand` or are due to a bug we accidentally introduced.
 
+
+Spinning Up C++ Threads
+----------------------------------------------------------------------------------------------------
+
+Averaging multiple photos is a viable option and can be a quick way to take advantage of the
+parallel nature of your hardware. But there is a long list of things to consider when doing it
+accurately, the biggest thing being your random number generator, but your renderer's
+post-processing also needs to be taken into account. If your post-processing step (gamma curve) is
+nonlinear, as the gamma curve almost always is, you cannot add the results of two gamma corrected
+outputs and get an accurate result. There are other considerations that we won't get into.
+
+Let's return to our rendering loop:
+
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C++
+    for (int j = image_height-1; j >= 0; --j) {
+        std::cerr << "\rScanlines remaining: " << j << ' ' << std::flush;
+        for (int i = 0; i < image_width; ++i) {
+            vec3 color;
+            for (int s = 0; s < samples_per_pixel; ++s) {
+                auto u = (i + random_double()) / image_width;
+                auto v = (j + random_double()) / image_height;
+                ray r = cam.get_ray(u, v);
+                color += ray_color(r, background, world, max_depth);
+            }
+            color.write_color(std::cout, samples_per_pixel);
+        }
+    }
+ 
+    std::cerr << "\nDone.\n";
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    [Listing [render-loop-return]: <kbd>[main.cc]</kbd> A return to the rendering loop]
+
+Our ultimate goal is to figure out a way to split up the work being done in this block of code. We
+know that our hardware can run multiple hardware threads at once, and that our operating system
+supports multiple programs by controlling how we match different programs to different hardware
+cores. Another option exists for us here. We can spin up a single program (a single render) and then
+use some of C++'s existing functionality to add additional threads to this program.
+
+From C++11 onward, C++ now has `std::thread` which can be called from within a C++ program to create
+and manage an operating system thread. Our C++ block tells the operating system that it has another
+thread, and then the operating system manages how that additional thread matches to the underlying
+hardware. We don't fully need to know how this works, but it is important to know that our program
+can choose to create more program threads than their are logical cores for. The operating system
+will manage this just fine. For my 6 core, 12 thread laptop, it's fine to spin up 1000s of threads
+if I want to. So, let's do that.
+
+We start by adding `std::thread` to the rendering loop:
+
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C++
+    #include <iostream>
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C++ highlight
+    #include <thread>
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C++
+    ...
+    int main() {
+    ...
+    for (int j = image_height-1; j >= 0; --j) {
+        std::cerr << "\rScanlines remaining: " << j << ' ' << std::flush;
+        for (int i = 0; i < image_width; ++i) {
+            vec3 color;
+            for (int s = 0; s < samples_per_pixel; ++s) {
+                auto u = (i + random_double()) / image_width;
+                auto v = (j + random_double()) / image_height;
+                ray r = cam.get_ray(u, v);
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C++ highlight
+                vec3 thread_color;
+                std::thread t0(ray_color, r, background, world, max_depth, &thread_color);
+                t0.join();
+                color += thread_color;
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C++
+            }
+            color.write_color(std::cout, samples_per_pixel);
+        }
+    }
+ 
+    std::cerr << "\nDone.\n";
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    [Listing [adding-threads]: <kbd>[main.cc]</kbd> Adding threads to the render]
+
+Lots to cover with this change. We've added a new default `vec3` called thread_color. We then
+call into a rather complicated constructor for the `std::thread` type. We then call `join` on our
+newly constructed thread, and then add `thread_color` back into `color`. To start, the `join`
+call is necessary for two reasons. First, the main thread must call into `join` to wait for results
+from that thread. The main thread must ask any constructed threads if they've completed their work.
+The `join` function tells the main thread to wait for the `t0` thread to finish all of it's work.
+
+The biggest change to the rendering loop is the construction of a `std::thread` called
+`t0`. When a thread is initialized it is passed a function as it's first parameter, in this case
+that function is `ray_color`, while the remaining arguments to the initialization are the arguments
+to the function argument. So, `r, background, world, max_depth, &thread_color` are the arguments
+we're passing to `ray_color`. We didn't previously have a `&thread_color` as a function argument to
+`ray_color`. We need to make this change because `std::thread` does not have a mechanism to capture
+the return values from it's function invocation. If we want to grab the output from `ray_color` we
+need to turn `ray_color` into a return type `void` and pass it's return value back through a
+pointer:
+
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C++ highlight
+    void ray_color(
+        const ray& r, const vec3& background, const hittable& world, int depth, vec3* color) {
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C++
+
+        hit_record rec;
+
+        // If we've exceeded the ray bounce limit, no more light is gathered.
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C++ highlight
+        if (depth <= 0) {
+            *color = vec3(0,0,0);
+            return;
+        }
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C++
+
+        // If the ray hits nothing, return the background color.
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C++ highlight
+        if (!world.hit(r, 0.001, infinity, rec)) {
+            *color = background;
+            return;
+        }
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C++
+
+        ray scattered;
+        vec3 attenuation;
+        vec3 emitted = rec.mat_ptr->emitted(rec.u, rec.v, rec.p);
+
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C++ highlight
+        if (!rec.mat_ptr->scatter(r, rec, attenuation, scattered)){
+            *color = emitted;
+            return;
+        }
+
+        *color = emitted + attenuation * ray_color(scattered, background, world, depth-1);
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C++
+    }
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    [Listing [adding-threads]: <kbd>[main.cc]</kbd> Adding threads to the render]
+
+After this change, the rendering loop will produce the same result as before:
+
+  <div class="render">
+
+  ![The Next Week final scene in 32 spp](../images/img.book2-final_32spp.png)
+
+  </div>
+
+But, it wasn't faster **at all**. In fact, it was _a lot_ slower. I wouldn't be surprised if you
+gave up partway through the render. What gives?
+
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C++
+    for (int j = image_height-1; j >= 0; --j) {
+        std::cerr << "\rScanlines remaining: " << j << ' ' << std::flush;
+        for (int i = 0; i < image_width; ++i) {
+            vec3 color;
+            for (int s = 0; s < samples_per_pixel; ++s) {
+                auto u = (i + random_double()) / image_width;
+                auto v = (j + random_double()) / image_height;
+                ray r = cam.get_ray(u, v);
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C++ highlight
+                vec3 thread_color;
+                std::thread t0(ray_color, r, background, world, max_depth, &thread_color);
+                t0.join();
+                color += thread_color;
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C++
+            }
+            color.write_color(std::cout, samples_per_pixel);
+        }
+    }
+ 
+    std::cerr << "\nDone.\n";
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    [Listing [thread-inspection]: <kbd>[main.cc]</kbd> Highlighting the threading changes]
+
+
+Let's inspect what we've asked our code to do.
+
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    for every ROW
+        for every PIXEL in ROW
+            for every SAMPLE per PIXEL
+                get RANDOM-RAY into PIXEL
+                start new THREAD for RANDOM-RAY
+                wait for new THREAD to stop
+                add results to PIXEL
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    [Listing [render-loop-pseudo]: The pseudo code for our modified rendering loop]
+
+We're spinning up a new thread and immediately waiting for it finish. We spin up one thread at a
+time and then wait for one thread at a time. We're never running multiple threads, so this is only
+as fast as doing the single-threaded render loop. Worse, we have to eat the cost of talking with the
+operating system to spin up new threads and other cross-thread communication (like `join`). So this
+can only be as fast as the single-threaded run, and will be significantly worse in practice. We'll
+need to think of something a bit more actionable.
+
+The loop as written only spins up a single thread at a time, and then waits for that single thread
+to finish. Maybe we'll get a speedup if we can figure out a way to spin up multiple threads at a
+time, and then wait for all of those to finish:
+
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    for all THREADs
+        start new THREAD
+
+    for all THREADs
+        wait for THREAD to stop
+
+    combine results
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    [Listing [multiple-threads]: The pseudo code for spinning up multiple threads]
+
+Let's turn that into c++ code:
+
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C++
+    for (int j = image_height-1; j >= 0; --j) {
+        std::cerr << "\rScanlines remaining: " << j << ' ' << std::flush;
+        for (int i = 0; i < image_width; ++i) {
+            vec3 color;
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C++ highlight
+            std::thread sample_threads[samples_per_pixel];
+            vec3 thread_colors[samples_per_pixel];
+
+            for (int s = 0; s < samples_per_pixel; ++s) {
+                auto u = (i + random_double()) / image_width;
+                auto v = (j + random_double()) / image_height;
+                ray r = cam.get_ray(u, v);
+                sample_threads[s] = std::thread(
+                    ray_color, r, background, world, max_depth, &thread_colors, s);
+            }
+
+            for (int s = 0; s < samples_per_pixel; ++s) {
+                sample_threads[s].join();
+                color += thread_colors[s];
+            }
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C++
+            
+            color.write_color(std::cout, samples_per_pixel);
+        }
+    }
+ 
+    std::cerr << "\nDone.\n";
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    [Listing [threads-per-sample]: <kbd>[main.cc]</kbd> Spin up threads across sampling of a pixel]
+
+We spin up multiple threads equal to the number of `samples_per_pixel` , and _then_ wait for them to
+finish so that we can take their sum.
+
+We added the `s` index to the `ray_color` function:
+
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C++
+    void ray_color(
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C++ highlight
+        const ray& r, const vec3& background, const hittable& world,
+        int depth, vec3* color, int thread_id) {
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C++
+
+        hit_record rec;
+
+        // If we've exceeded the ray bounce limit, no more light is gathered.
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C++ highlight
+        if (depth <= 0) {
+            color[thread_id] = vec3(0,0,0);
+            return;
+        }
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C++
+
+        // If the ray hits nothing, return the background color.
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C++ highlight
+        if (!world.hit(r, 0.001, infinity, rec)) {
+            color[thread_id] = background;
+            return;
+        }
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C++
+
+        ray scattered;
+        vec3 attenuation;
+        vec3 emitted = rec.mat_ptr->emitted(rec.u, rec.v, rec.p);
+
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C++ highlight
+        if (!rec.mat_ptr->scatter(r, rec, attenuation, scattered)){
+            color[thread_id] = emitted;
+            return;
+        }
+
+        color[thread_id] = emitted + attenuation * ray_color(scattered, background, world, depth-1);
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C++
+    }
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    [Listing [adding-threads]: <kbd>[main.cc]</kbd> Adding threads to the render]
+
+
+<!-- Discuss race conditions --> 
+
+<!-- Implement vector of pixel data --> 
+
+
+N Threads for the Whole Render
+----------------------------------------------------------------------------------------------------
 
 
 
