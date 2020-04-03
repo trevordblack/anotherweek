@@ -131,7 +131,7 @@ If you have a comfortable and working familiarity with multithreading you can sa
 last section of this chapter. The work leading up to then is mostly theory.
 
 Averaging N Photos
-----------------------------------------------------------------------------------------------------
+-------------------
 
 We can start with an instructive, if limiting, exercise. Don't worry about implementing any of the
 changes seen in this section, they're meant for instruction, not implementation.
@@ -162,8 +162,8 @@ and scene build up, but 99.9% of our runtime exists within this code block. A fe
 
 1. It's a triply-nest loop, meaning it has 3 layers of `for` loops
 2. We would expect that `ray_color` is where the majority of our runtime comes from
-3. The number of `ray_color` invocations appears to scale with
-`image_height`*`image_width`*`samples_per_pixel`
+3. The number of `ray_color` invocations appears to scale with $image\_height * image\_width *
+samples\_per\_pixel$
 
 If you've played around with image dimension or pixel sampling, you'll have noticed that the program
 time of your render will have scaled linearly with the number of pixels or their sample count. If we
@@ -215,7 +215,7 @@ won't need to explicitly combine the images to follow along.
 When we use a photo editor to combine our two 4spp images we get:
   <div class="render">
 
-  ![Two checker scene renders averaged](../images/img.book2-final_4spp.png)
+  ![Two checker scene renders averaged](../images/img.checker-scene_4spp.png)
 
   </div>
 
@@ -323,32 +323,161 @@ Indeed, we do:
 
   </div>
 
+So it looks like we have successfully changed the seed for the render and now, each time we run the
+program, we get different random numbers, so a different sampling of the image. A bigger problem has
+appeared though: The change in seed has also changed the location of the smaller sphere in our
+scene. If we were to just average these two photos all of the smaller spheres would appear to be at
+50% transparency and everything would look like it has motion blur active.
 
-<!-- "Show off new averaging"--> 
+Let's look at our scene setup:
 
-<!-- "Explain why it fails for random parts of our scene"--> 
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C++
+    hittable_list random_scene() {
+        hittable_list world;
 
-<!-- "Say that we can map random parts of the scene to a constant seed"-->
+        auto checker = make_shared<checker_texture>(
+            make_shared<constant_texture>(vec3(0.2, 0.3, 0.1)),
+            make_shared<constant_texture>(vec3(0.9, 0.9, 0.9))
+        );
+
+        world.add(make_shared<sphere>(vec3(0,-1000,0), 1000, make_shared<lambertian>(checker)));
+
+        for (int a = -10; a < 10; a++) {
+            for (int b = -10; b < 10; b++) {
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C++ highlight
+                auto choose_mat = random_double();
+                vec3 center(a + 0.9*random_double(), 0.2, b + 0.9*random_double());
+                if ((center - vec3(4, .2, 0)).length() > 0.9) {
+                    if (choose_mat < 0.8) {
+                        // diffuse
+                        auto albedo = vec3::random() * vec3::random();
+                        world.add(make_shared<moving_sphere>(
+                            center, center + vec3(0, random_double(0,.5), 0), 0.0, 1.0, 0.2,
+                            make_shared<lambertian>(make_shared<constant_texture>(albedo))
+                        ));
+                    } else if (choose_mat < 0.95) {
+                        // metal
+                        auto albedo = vec3::random(.5, 1);
+                        auto fuzz = random_double(0, .5);
+                        world.add(
+                            make_shared<sphere>(center, 0.2, make_shared<metal>(albedo, fuzz)));
+                    } else {
+                        // glass
+                        world.add(make_shared<sphere>(center, 0.2, make_shared<dielectric>(1.5)));
+                    }
+                }
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C++
+            }
+        }
+
+        world.add(make_shared<sphere>(vec3(0, 1, 0), 1.0, make_shared<dielectric>(1.5)));
+        world.add(make_shared<sphere>(
+            vec3(-4, 1, 0), 1.0,
+            make_shared<lambertian>(make_shared<constant_texture>(vec3(0.4, 0.2, 0.1)))
+        ));
+        world.add(
+            make_shared<sphere>(vec3(4, 1, 0), 1.0, make_shared<metal>(vec3(0.7, 0.6, 0.5), 0.0)));
+
+        return hittable_list(make_shared<bvh_node>(world, 0.0, 1.0));
+    }
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    [Listing [random-scene]: <kbd>[main.cc]</kbd> The declaration of the checker_scene with highlighting]
+
+
+There are a bunch of declarations in the middle that use random numbers to generate the scene. The
+very first thing to come to mind is that we should go and replace all those random number calls
+with fixed values, so that they don't change between draws. This will work, however, we can be a
+bit more clever than that. We naively called `srand` right at the beginning of the `main`
+invocation. We can push setting the seed to after we define our checker scene. Making sure that we
+still call `srand` before we produce random numbers for sampling!
+
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C++
+    #include <iostream>
+    #include <ctime>
+    ...
+    int main() {
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C++ highlight
+        // remove srand
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C++
+        const auto aspect_ratio = 16.0/9.0;
+        const int image_width = 768;
+        const int image_height = image_width / aspect_ratio;
+        ...
+
+        // Invoke random_scene
+
+        ...
+
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C++ highlight
+        srand(time(NULL));
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ C++
+
+        std::cout << "P3\n" << image_width << ' ' << image_height << "\n255\n";
+
+        camera cam(lookfrom, lookat, vup, vfov, aspect_ratio, aperture, dist_to_focus, 0.0, 1.0);
+
+        for (int j = image_height-1; j >= 0; --j) {
+            std::cerr << "\rScanlines remaining: " << j << ' ' << std::flush;
+            for (int i = 0; i < image_width; ++i) {
+                vec3 color;
+                for (int s = 0; s < samples_per_pixel; ++s) {
+                    auto u = (i + random_double()) / image_width;
+                    auto v = (j + random_double()) / image_height;
+                    ray r = cam.get_ray(u, v);
+                    color += ray_color(r, background, world, max_depth);
+                }
+                color.write_color(std::cout, samples_per_pixel);
+            }
+        }
+
+        std::cerr << "\nDone.\n";
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    [Listing [changing-rand-seed]: <kbd>[main.cc]</kbd> Changing the seed for rand on program start]
+
+When we run 2 instances of the program we get:
+
+  <div class="render">
+
+  ![The checker scene with later seed reset (first seed)](../images/img.checker-scene_seed-after-1_4spp.png)
+
+  </div>
+
+  <div class="render">
+
+  ![The checker scene with later seed reset (second seed)](../images/img.checker-scene_seed-after-2_4spp.png)
+
+  </div>
+
+Which have the same scene, and appear to have slightly different sampling. When combined we get an
+accurate 8 sample per pixel render:
+
+  <div class="render">
+
+  ![The checker scene with combined seed reset](../images/img.checker-scene_seed-after_8spp.png)
+
+  </div>
+
+That was a lot to do about random numbers, but we mostly came to a simple final solution.
 
 The lesson here is that if you have multiple runs of a render you need to be cognizant of where your
 random numbers are coming from, and where they are going. Something that hasn't been mentioned until
-now needs to be brought up. It's perhaps a bit strange that `rand` starts with the seed every time
-until the programmer explicitly changes it. For a function that is producing random numbers, a naive
-assumption would be that `rand` should be producing _different_ random numbers each time, and so
-**should** be starting with a different seed every time.
+now needs to be brought up. It's perhaps a bit strange that `rand` starts with the same seed every
+time until the programmer explicitly changes it. For a function that is producing random numbers, a
+naive assumption would be that `rand` should be producing _different_ random numbers each time, and
+so **should** be starting with a different seed every time.
 
 However, this isn't the case in practice, and `rand` always starts with a specific seed. Indeed,
-this is the default, as it is desirable for a random number generator to have a specific seed.
-Between different runs of our renderer, as we increase samples per pixel or make edits to our code,
-we want code that is functionally the same to produce an identical image. If accidentally introduce
-a bug to our code, we want our output to change, indeed we only want our output to change when our
-code has become functionally different. If our random number generator (`rand`) produced different
-images between one run and the next, we would have a much more difficult time knowing if the changes
-are due to `rand` or are due to a bug we accidentally introduced.
+this is the default, as it is desirable for a random number generator to have a specific default
+seed. Between different runs of our renderer, as we increase samples per pixel or make edits to our
+code, we want code that is functionally the same to produce an identical image. If we accidentally
+introduce a bug to our code, we want our output to change. Indeed, we only want our output to
+change when our code has become functionally different. If our random number generator (`rand`)
+produced different images between one run and the next, we would have a much more difficult time
+knowing if the image changes are due to `rand` or are due to a bug we accidentally introduced.
 
 
 Spinning Up C++ Threads
-----------------------------------------------------------------------------------------------------
+------------------------
 
 Averaging multiple photos is a viable option and can be a quick way to take advantage of the
 parallel nature of your hardware. But there is a long list of things to consider when doing it
